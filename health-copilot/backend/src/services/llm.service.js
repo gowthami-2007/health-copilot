@@ -1,5 +1,3 @@
-const https = require('https');
-const http = require('http');
 const path = require('path');
 const dotenv = require('dotenv');
 
@@ -36,18 +34,18 @@ class LLMService {
     // Auto-detect provider if not explicitly configured
     if (this.apiKey.startsWith('AQ.') || this.apiKey.startsWith('AIzaSy')) {
       // Google Gemini
-      if (!this.apiBase || this.apiBase.includes('openai.com')) {
-        this.apiBase = 'https://generativelanguage.googleapis.com/v1beta/openai';
-      }
+      this.isGemini = true;
       if (!this.model || this.model.startsWith('gpt-')) {
         this.model = 'gemini-flash-lite-latest';
       }
     } else if (this.apiKey.startsWith('gsk_')) {
       // Groq
+      this.isGemini = false;
       if (!this.apiBase) this.apiBase = 'https://api.groq.com/openai/v1';
       if (!this.model) this.model = 'llama-3.3-70b-versatile';
     } else {
       // OpenAI default
+      this.isGemini = false;
       if (!this.apiBase) this.apiBase = 'https://api.openai.com/v1';
       if (!this.model) this.model = 'gpt-4o-mini';
     }
@@ -80,90 +78,136 @@ class LLMService {
         documentContext.map((d, i) => `[Document ${i + 1}: ${d.fileName || 'Report'}]\n${d.text || d.chunkText || d.extractedText || ''}`).join('\n\n');
     }
 
-    // Format conversation history (limit to last 10 messages for performance and context limits)
+    // Sanitize conversation history (last 8 messages)
     const sanitizedHistory = (history || [])
-      .slice(-10)
+      .slice(-8)
       .filter((h) => h && h.content && (h.role === 'user' || h.role === 'assistant'))
       .map((h) => ({
         role: h.role,
-        content: String(h.content).substring(0, 2000),
+        content: String(h.content).substring(0, 1500),
       }));
 
+    // If Gemini key, try native Google generateContent first (ultra-fast & reliable)
+    if (this.isGemini) {
+      try {
+        return await this.callGeminiWithFallback(systemContent, sanitizedHistory, message.trim());
+      } catch (err) {
+        console.warn('Native Gemini call failed, trying OpenAI-compatible endpoint fallback:', err.message);
+      }
+    }
+
+    // Fallback or OpenAI/Groq standard chat completions
     const messages = [
       { role: 'system', content: systemContent },
       ...sanitizedHistory,
       { role: 'user', content: message.trim() },
     ];
 
-    // Call LLM API (OpenAI-compatible chat completion)
-    const completion = await this.callChatCompletion(messages);
-    return completion;
+    return await this.callOpenAIChatCompletion(messages);
   }
 
   /**
-   * Low-level HTTP request to LLM completion endpoint
+   * Native Google Gemini generateContent with automatic model fallback
    */
-  async callChatCompletion(messages) {
-    const fullUrl = this.apiBase.endsWith('/') ? `${this.apiBase}chat/completions` : `${this.apiBase}/chat/completions`;
-    const url = new URL(fullUrl);
+  async callGeminiWithFallback(systemInstruction, history, userPrompt) {
+    const candidateModels = [
+      this.model || 'gemini-flash-lite-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-2.5-flash',
+    ];
 
-    const payload = JSON.stringify({
-      model: this.model,
-      messages,
-      temperature: 0.35,
-      max_tokens: 1200,
-    });
-
-    const client = url.protocol === 'https:' ? https : http;
-
-    return new Promise((resolve, reject) => {
-      const req = client.request(
-        url,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
-            'Content-Length': Buffer.byteLength(payload),
-          },
-          timeout: 30000, // 30s timeout
-        },
-        (res) => {
-          let data = '';
-          res.on('data', (chunk) => (data += chunk));
-          res.on('end', () => {
-            if (res.statusCode >= 200 && res.statusCode < 300) {
-              try {
-                const parsed = JSON.parse(data);
-                const reply = parsed.choices?.[0]?.message?.content;
-                if (!reply || typeof reply !== 'string') {
-                  return reject(new Error('MALFORMED_LLM_RESPONSE: Received empty response content from LLM'));
-                }
-                resolve(reply.trim());
-              } catch (err) {
-                reject(new Error(`PARSE_ERROR: Failed to parse LLM JSON: ${err.message}`));
-              }
-            } else {
-              let errorMsg = `LLM API Error (Status ${res.statusCode})`;
-              try {
-                const parsedError = JSON.parse(data);
-                errorMsg = parsedError.error?.message || errorMsg;
-              } catch (_) {}
-              reject(new Error(errorMsg));
-            }
-          });
-        }
-      );
-
-      req.on('error', (err) => reject(new Error(`NETWORK_ERROR: ${err.message}`)));
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('TIMEOUT: The LLM API request timed out after 30 seconds'));
+    // Build Gemini contents array
+    const contents = [];
+    for (const item of history) {
+      contents.push({
+        role: item.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: item.content }],
       });
-
-      req.write(payload);
-      req.end();
+    }
+    contents.push({
+      role: 'user',
+      parts: [{ text: userPrompt }],
     });
+
+    let lastError = null;
+
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents,
+            generationConfig: {
+              temperature: 0.35,
+              maxOutputTokens: 1000,
+            },
+          }),
+          signal: AbortSignal.timeout(12000), // 12s timeout per candidate
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply && reply.trim()) {
+            return reply.trim();
+          }
+        } else {
+          const errData = await res.text();
+          console.warn(`Gemini model ${model} returned status ${res.status}: ${errData.slice(0, 100)}`);
+          lastError = new Error(`Status ${res.status}: ${errData}`);
+        }
+      } catch (err) {
+        console.warn(`Gemini model ${model} error: ${err.message}`);
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('All Gemini candidate models failed to respond.');
+  }
+
+  /**
+   * OpenAI-compatible chat completions API
+   */
+  async callOpenAIChatCompletion(messages) {
+    let apiBase = this.apiBase;
+    if (this.isGemini && (!apiBase || apiBase.includes('openai.com'))) {
+      apiBase = 'https://generativelanguage.googleapis.com/v1beta/openai';
+    } else if (!apiBase) {
+      apiBase = 'https://api.openai.com/v1';
+    }
+
+    const fullUrl = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+
+    const res = await fetch(fullUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages,
+        temperature: 0.35,
+        max_tokens: 1000,
+      }),
+      signal: AbortSignal.timeout(15000), // 15s timeout
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`LLM API returned status ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    if (!reply || typeof reply !== 'string') {
+      throw new Error('MALFORMED_LLM_RESPONSE: Received empty response from LLM');
+    }
+
+    return reply.trim();
   }
 }
 

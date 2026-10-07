@@ -117,6 +117,10 @@ class AIChatService {
       });
     } catch (llmError) {
       console.error('LLM generation error in AIChatService:', llmError.message);
+      // Clean up orphaned user message so it doesn't leave an unanswered prompt in DB
+      if (userMsg && userMsg._id) {
+        await Message.findByIdAndDelete(userMsg._id).catch(() => {});
+      }
       // Clean, user-facing error message without exposing secrets
       if (llmError.message.includes('AI_CONFIG_MISSING')) {
         throw new Error('The AI service is not configured. Please set AI_API_KEY in the backend environment.');

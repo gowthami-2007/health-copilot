@@ -118,7 +118,20 @@ const Assistant = () => {
       ]);
     } catch (err) {
       console.error('Chat error:', err);
-      setError(err.message || 'The AI service is temporarily unavailable. Please try again.');
+      const friendlyError = err.message || 'The AI service took longer than expected to respond. Please try again.';
+      setError(friendlyError);
+
+      // Append assistant error message directly in chat stream so it never stays quiet
+      setMessages((prev) => [
+        ...prev,
+        {
+          _id: `err-${Date.now()}`,
+          role: 'assistant',
+          isError: true,
+          content: `⚠️ ${friendlyError}\n\nPlease try sending your message again.`,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     } finally {
       setSendingQuery(false);
     }
