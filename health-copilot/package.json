@@ -32,5 +32,8 @@
     "medical-documents"
   ],
   "author": "Health Copilot Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
 }

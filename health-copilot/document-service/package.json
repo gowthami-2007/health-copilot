@@ -8,7 +8,8 @@
     "test": "node --test ../tests/documents/*.test.js"
   },
   "dependencies": {
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {},
   "type": "commonjs"

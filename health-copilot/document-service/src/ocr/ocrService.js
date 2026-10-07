@@ -1,10 +1,10 @@
 const fs = require('fs');
+const Tesseract = require('tesseract.js');
 const { cleanText } = require('../cleaning/textCleaner');
 
 /**
  * Image / OCR handler.
- * If external OCR binary or tesseract is available, runs OCR.
- * Otherwise extracts metadata or fallback text.
+ * Uses Tesseract.js to perform OCR directly in Node.js on JPG/JPEG/PNG documents.
  */
 const extractTextFromImage = async (filePath) => {
   try {
@@ -17,16 +17,28 @@ const extractTextFromImage = async (filePath) => {
       throw new Error('Image file is empty');
     }
 
-    // In local environments without heavyweight tesseract engine binaries,
-    // verify file presence and provide structured fallback response
+    console.log(`[OCR] Starting Tesseract OCR recognition on: ${filePath}`);
+    const { data: { text } } = await Tesseract.recognize(filePath, 'eng');
+    const cleaned = cleanText(text || '');
+
+    console.log(`[OCR] Recognition complete. Extracted ${cleaned.length} characters.`);
+
+    return {
+      text: cleaned,
+      hasText: cleaned.length > 10,
+      isImage: true,
+      message: cleaned.length > 10
+        ? 'Text extracted successfully from image via OCR.'
+        : "We couldn't extract readable text from this document image.",
+    };
+  } catch (error) {
+    console.error(`[OCR] Processing error: ${error.message}`);
     return {
       text: '',
       hasText: false,
       isImage: true,
-      message: 'Scanned image document uploaded. Direct text layer not present in raster image.',
+      message: `OCR processing failed: ${error.message}`,
     };
-  } catch (error) {
-    throw new Error(`OCR processing error: ${error.message}`);
   }
 };
 

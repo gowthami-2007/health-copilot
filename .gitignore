@@ -31,6 +31,7 @@ temp/
 *.png
 *.jpg
 *.jpeg
+*.traineddata
 
 # OS
 .DS_Store
