@@ -1,26 +1,77 @@
 const http = require('http');
 const https = require('https');
+const path = require('path');
+const dotenv = require('dotenv');
 
 class LLMClient {
   constructor() {
-    this.apiKey = process.env.AI_API_KEY || '';
-    this.model = process.env.AI_MODEL || 'gpt-4o-mini';
-    this.apiBase = process.env.AI_API_BASE || 'https://api.openai.com/v1';
+    this.loadEnv();
+  }
+
+  loadEnv() {
+    dotenv.config({ path: path.resolve(__dirname, '../../../backend/.env') });
+    dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+  }
+
+  /**
+   * Resolves configuration dynamically to pick up changes in .env.
+   * Auto-detects Google Gemini, OpenAI, or Groq API keys based on prefix.
+   */
+  getConfig() {
+    this.loadEnv();
+
+    const apiKey = (process.env.AI_API_KEY || '').trim();
+    let apiBase = (process.env.AI_API_BASE || '').trim();
+    let model = (process.env.AI_MODEL || '').trim();
+
+    // 1. Google Gemini (Google AI Studio keys start with AIzaSy)
+    if (apiKey.startsWith('AIzaSy')) {
+      if (!apiBase || apiBase.includes('openai.com')) {
+        apiBase = 'https://generativelanguage.googleapis.com/v1beta/openai';
+      }
+      if (!model || model.startsWith('gpt-')) {
+        model = 'gemini-2.0-flash';
+      }
+    }
+    // 2. Groq (Groq keys start with gsk_)
+    else if (apiKey.startsWith('gsk_')) {
+      if (!apiBase || apiBase.includes('openai.com')) {
+        apiBase = 'https://api.groq.com/openai/v1';
+      }
+      if (!model || model.startsWith('gpt-')) {
+        model = 'llama-3.3-70b-versatile';
+      }
+    }
+    // 3. Default OpenAI
+    else {
+      if (!apiBase) {
+        apiBase = 'https://api.openai.com/v1';
+      }
+      if (!model) {
+        model = 'gpt-4o-mini';
+      }
+    }
+
+    return { apiKey, apiBase, model };
   }
 
   /**
    * Sends a chat completion request to the OpenAI-compatible endpoint.
    */
   async chatCompletion({ messages, temperature = 0.3, maxTokens = 1200 }) {
-    if (!this.apiKey) {
-      // Return null to signal local fallback generation
+    const { apiKey, apiBase, model } = this.getConfig();
+
+    if (!apiKey) {
+      // Signal local fallback generation
       return null;
     }
 
     try {
-      const url = new URL(`${this.apiBase}/chat/completions`);
+      const fullUrl = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+      const url = new URL(fullUrl);
+
       const body = JSON.stringify({
-        model: this.model,
+        model,
         messages,
         temperature,
         max_tokens: maxTokens,
@@ -35,10 +86,10 @@ class LLMClient {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${this.apiKey}`,
+              Authorization: `Bearer ${apiKey}`,
               'Content-Length': Buffer.byteLength(body),
             },
-            timeout: 20000,
+            timeout: 25000,
           },
           (res) => {
             let data = '';
@@ -69,7 +120,7 @@ class LLMClient {
         req.end();
       });
     } catch (error) {
-      console.warn(`External LLM API call error (${error.message}). Falling back to local heuristic engine.`);
+      console.warn(`External LLM API call error (${error.message}). Falling back to local semantic engine.`);
       return null;
     }
   }
