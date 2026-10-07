@@ -1,24 +1,38 @@
 const aiChatService = require('../services/aiChatService');
 const aiServiceClient = require('../services/aiServiceClient');
 const Document = require('../models/Document');
-const { successResponse } = require('../utils/apiResponse');
 const { BadRequestError } = require('../utils/errors');
 
 class AIController {
+  /**
+   * Health Chat Handler. Accepts both { message, history } and { question, conversationId }.
+   */
   async chat(req, res, next) {
     try {
-      const { question, conversationId } = req.body;
-      if (!question || !question.trim()) {
-        throw new BadRequestError('Please provide a health question');
+      const { question, message, conversationId, history } = req.body;
+      const rawText = (message || question || '').trim();
+
+      if (!rawText) {
+        throw new BadRequestError('Please provide a message or question for the health assistant.');
+      }
+
+      if (rawText.length > 2500) {
+        throw new BadRequestError('Message exceeds maximum allowed length of 2500 characters.');
       }
 
       const result = await aiChatService.sendMessage({
-        userId: req.user.id,
+        userId: req.user?.id || null,
         conversationId,
-        question,
+        question: rawText,
+        message: rawText,
+        history,
       });
 
-      return successResponse(res, 'AI response generated successfully', result, 200);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
@@ -27,7 +41,11 @@ class AIController {
   async getConversations(req, res, next) {
     try {
       const conversations = await aiChatService.getUserConversations(req.user.id);
-      return successResponse(res, 'Conversations retrieved', { conversations }, 200);
+      return res.status(200).json({
+        success: true,
+        message: 'Conversations retrieved',
+        data: { conversations },
+      });
     } catch (error) {
       next(error);
     }
@@ -39,7 +57,11 @@ class AIController {
         req.params.conversationId,
         req.user.id
       );
-      return successResponse(res, 'Messages retrieved', { messages }, 200);
+      return res.status(200).json({
+        success: true,
+        message: 'Messages retrieved',
+        data: { messages },
+      });
     } catch (error) {
       next(error);
     }
@@ -51,7 +73,11 @@ class AIController {
         req.params.conversationId,
         req.user.id
       );
-      return successResponse(res, result.message, {}, 200);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {},
+      });
     } catch (error) {
       next(error);
     }
@@ -73,7 +99,11 @@ class AIController {
       doc.summary = summary;
       await doc.save();
 
-      return successResponse(res, 'Document summarized', { summary }, 200);
+      return res.status(200).json({
+        success: true,
+        message: 'Document summarized',
+        data: { summary },
+      });
     } catch (error) {
       next(error);
     }

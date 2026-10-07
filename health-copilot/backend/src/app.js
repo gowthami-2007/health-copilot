@@ -72,6 +72,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Direct Chat API endpoint: POST /api/chat
+const { optionalAuth } = require('./middleware/authMiddleware');
+const aiController = require('./controllers/aiController');
+app.post('/api/chat', optionalAuth, (req, res, next) => aiController.chat(req, res, next));
+
 // Mount Routes (lazy-loaded or required)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));

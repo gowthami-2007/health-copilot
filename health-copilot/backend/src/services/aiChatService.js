@@ -1,8 +1,8 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Document = require('../models/Document');
-const aiServiceClient = require('./aiServiceClient');
-const { NotFoundError, ForbiddenError } = require('../utils/errors');
+const llmService = require('./llm.service');
+const { NotFoundError, BadRequestError } = require('../utils/errors');
 
 class AIChatService {
   /**
@@ -43,66 +43,107 @@ class AIChatService {
   }
 
   /**
-   * Sends a user query to the RAG pipeline with strictly scoped user documents.
+   * Sends a user query to the real LLM pipeline with multi-turn history & user document context.
    */
-  async sendMessage({ userId, conversationId, question }) {
-    if (!question || !question.trim()) {
-      throw new Error('Question cannot be empty');
+  async sendMessage({ userId, conversationId, question, message, history = [] }) {
+    const rawQuery = (message || question || '').trim();
+
+    if (!rawQuery) {
+      throw new BadRequestError('Message cannot be empty');
     }
 
-    // 1. Get or create conversation scoped to this user
-    const conversation = await this.getOrCreateConversation(
-      userId,
-      conversationId,
-      question.trim()
-    );
+    if (rawQuery.length > 2500) {
+      throw new BadRequestError('Message exceeds maximum allowed length of 2500 characters');
+    }
 
-    // 2. Fetch recent conversation history
-    const history = await Message.find({ conversationId: conversation._id })
-      .sort({ createdAt: -1 })
-      .limit(6);
-    const formattedHistory = history.reverse().map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // 1. Get or create conversation record
+    let conversation = null;
+    if (userId) {
+      conversation = await this.getOrCreateConversation(userId, conversationId, rawQuery);
+    }
 
-    // 3. Strictly fetch ONLY this user's processed documents for RAG context
-    const userDocuments = await Document.find({
-      userId,
-      status: 'PROCESSED',
-    }).select('fileName documentType chunks extractedText createdAt');
+    // 2. Build multi-turn conversation context
+    let formattedHistory = [];
+    if (Array.isArray(history) && history.length > 0) {
+      formattedHistory = history
+        .slice(-8)
+        .filter((h) => h && h.content && (h.role === 'user' || h.role === 'assistant'))
+        .map((h) => ({ role: h.role, content: String(h.content).trim() }));
+    } else if (conversation) {
+      const dbHistory = await Message.find({ conversationId: conversation._id })
+        .sort({ createdAt: -1 })
+        .limit(8);
+      formattedHistory = dbHistory.reverse().map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+    }
 
-    // 4. Save user message to DB
-    const userMsg = await Message.create({
-      conversationId: conversation._id,
-      role: 'user',
-      content: question.trim(),
-    });
+    // 3. Strictly fetch user's processed medical documents if user is logged in
+    let documentContext = [];
+    if (userId) {
+      const userDocs = await Document.find({
+        userId,
+        status: 'PROCESSED',
+      })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('fileName documentType extractedText createdAt');
 
-    // 5. Query RAG engine
-    const aiResponse = await aiServiceClient.queryChat({
-      question: question.trim(),
-      userDocuments,
-      conversationHistory: formattedHistory,
-    });
+      documentContext = userDocs.map((doc) => ({
+        fileName: doc.fileName,
+        documentType: doc.documentType,
+        text: (doc.extractedText || '').substring(0, 1500),
+      }));
+    }
 
-    // 6. Save assistant message to DB
-    const assistantMsg = await Message.create({
-      conversationId: conversation._id,
-      role: 'assistant',
-      content: aiResponse.answer,
-      sources: aiResponse.sources || [],
-    });
+    // 4. Record user message in DB if user is authenticated
+    let userMsg = null;
+    if (conversation) {
+      userMsg = await Message.create({
+        conversationId: conversation._id,
+        role: 'user',
+        content: rawQuery,
+      });
+    }
 
-    // 7. Touch conversation updatedAt
-    conversation.updatedAt = new Date();
-    await conversation.save();
+    // 5. Invoke Real LLM Service
+    let generatedAnswer = '';
+    try {
+      generatedAnswer = await llmService.generateResponse({
+        message: rawQuery,
+        history: formattedHistory,
+        documentContext,
+      });
+    } catch (llmError) {
+      console.error('LLM generation error in AIChatService:', llmError.message);
+      // Clean, user-facing error message without exposing secrets
+      if (llmError.message.includes('AI_CONFIG_MISSING')) {
+        throw new Error('The AI service is not configured. Please set AI_API_KEY in the backend environment.');
+      }
+      throw new Error('The AI service is temporarily unavailable. Please try again.');
+    }
+
+    // 6. Record assistant message in DB
+    let assistantMsg = null;
+    if (conversation) {
+      assistantMsg = await Message.create({
+        conversationId: conversation._id,
+        role: 'assistant',
+        content: generatedAnswer,
+        sources: documentContext.map((d) => ({ fileName: d.fileName })),
+      });
+
+      conversation.updatedAt = new Date();
+      await conversation.save();
+    }
 
     return {
-      conversationId: conversation._id,
-      userMessage: userMsg,
-      assistantMessage: assistantMsg,
-      sources: aiResponse.sources || [],
+      conversationId: conversation?._id || null,
+      message: generatedAnswer,
+      userMessage: userMsg || { role: 'user', content: rawQuery },
+      assistantMessage: assistantMsg || { role: 'assistant', content: generatedAnswer },
+      sources: documentContext.map((d) => ({ fileName: d.fileName })),
     };
   }
 

@@ -160,7 +160,7 @@ const ChatWindow = ({
                   }}
                 >
                   <span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
-                  <span>Searching your authorized health records & synthesizing insights...</span>
+                  <span style={{ fontWeight: 500 }}>Thinking...</span>
                 </div>
               </div>
             )}

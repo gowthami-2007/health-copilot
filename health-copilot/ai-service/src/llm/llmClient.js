@@ -24,13 +24,13 @@ class LLMClient {
     let apiBase = (process.env.AI_API_BASE || '').trim();
     let model = (process.env.AI_MODEL || '').trim();
 
-    // 1. Google Gemini (Google AI Studio keys start with AIzaSy)
-    if (apiKey.startsWith('AIzaSy')) {
+    // 1. Google Gemini (Google AI Studio keys start with AIzaSy or AQ.)
+    if (apiKey.startsWith('AQ.') || apiKey.startsWith('AIzaSy')) {
       if (!apiBase || apiBase.includes('openai.com')) {
         apiBase = 'https://generativelanguage.googleapis.com/v1beta/openai';
       }
       if (!model || model.startsWith('gpt-')) {
-        model = 'gemini-2.0-flash';
+        model = 'gemini-flash-lite-latest';
       }
     }
     // 2. Groq (Groq keys start with gsk_)

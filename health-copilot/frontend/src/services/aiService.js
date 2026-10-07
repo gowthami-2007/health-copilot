@@ -1,8 +1,16 @@
 import api from './api';
 
 export const aiService = {
-  async sendChat(question, conversationId = null) {
-    return await api.post('/ai/chat', { question, conversationId });
+  /**
+   * Sends user message and prior conversation history to POST /api/chat.
+   */
+  async sendChat(message, conversationId = null, history = []) {
+    return await api.post('/chat', {
+      message,
+      question: message,
+      conversationId,
+      history,
+    });
   },
 
   async getConversations() {

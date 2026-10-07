@@ -69,6 +69,9 @@ const Assistant = () => {
   }, [initialPrompt]);
 
   const handleSendMessage = async (question) => {
+    const rawText = (question || '').trim();
+    if (!rawText) return;
+
     try {
       setSendingQuery(true);
       setError(null);
@@ -77,28 +80,45 @@ const Assistant = () => {
       const tempUserMsg = {
         _id: `temp-${Date.now()}`,
         role: 'user',
-        content: question,
+        content: rawText,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, tempUserMsg]);
 
-      const res = await aiService.sendChat(question, activeConversationId);
-      const { conversationId, assistantMessage } = res.data;
+      // Format history from current messages
+      const historyPayload = messages
+        .filter((m) => m && m.content && !m._id?.startsWith('temp-'))
+        .slice(-8)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+      const res = await aiService.sendChat(rawText, activeConversationId, historyPayload);
+      const data = res.data || {};
+      const conversationId = data.conversationId;
+      const returnedAssistantMsg = data.assistantMessage || {
+        _id: `resp-${Date.now()}`,
+        role: 'assistant',
+        content: res.message || data.message || 'No response content received.',
+        createdAt: new Date().toISOString(),
+      };
+      const returnedUserMsg = data.userMessage || tempUserMsg;
 
       // If new conversation was created, update state
-      if (!activeConversationId || activeConversationId !== conversationId) {
+      if (!activeConversationId || (conversationId && activeConversationId !== conversationId)) {
         setActiveConversationId(conversationId);
         fetchConversations();
       }
 
       setMessages((prev) => [
         ...prev.filter((m) => m._id !== tempUserMsg._id),
-        res.data.userMessage,
-        assistantMessage,
+        returnedUserMsg,
+        returnedAssistantMsg,
       ]);
     } catch (err) {
       console.error('Chat error:', err);
-      setError(err.message || 'AI assistant was unable to process your request.');
+      setError(err.message || 'The AI service is temporarily unavailable. Please try again.');
     } finally {
       setSendingQuery(false);
     }
