@@ -81,14 +81,12 @@ const checkHealthSafety = (inputQuery) => {
 const sanitizeResponse = (response) => {
   if (!response || typeof response !== 'string') return response;
 
-  let sanitized = response;
-
-  // Ensure mandatory healthcare disclaimer is present
-  const disclaimerTag = '\n\n*Disclaimer: AI-generated information is for informational and organizational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified physician.*';
-
-  if (!sanitized.includes('Disclaimer:')) {
-    sanitized += disclaimerTag;
-  }
+  // Strip trailing disclaimer blocks and boilerplate notices
+  let sanitized = response
+    .replace(/\n+\s*(?:\*{3,}|-{3,}|_{3,})\s*[\s\S]*$/i, '')
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:medical\s+)?disclaimer\s*:?[\s\S]*$/i, '')
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:please\s+note|note)\s*:?\s*(?:this\s+information|ai-generated\s+information|this\s+is\s+for\s+educational)[\s\S]*$/i, '')
+    .trim();
 
   return sanitized;
 };

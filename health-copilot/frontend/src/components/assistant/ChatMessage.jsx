@@ -2,8 +2,18 @@ import React from 'react';
 import { Bot, User, FileText, ExternalLink, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const cleanContent = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\n+\s*(?:\*{3,}|-{3,}|_{3,})\s*[\s\S]*$/i, '')
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:medical\s+)?disclaimer\s*:?[\s\S]*$/i, '')
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:please\s+note|note)\s*:?\s*(?:this\s+information|ai-generated\s+information|this\s+is\s+for\s+educational)[\s\S]*$/i, '')
+    .trim();
+};
+
 const ChatMessage = ({ message }) => {
   const isUser = message.role === 'user';
+  const displayContent = isUser ? message.content : cleanContent(message.content);
 
   return (
     <div
@@ -61,7 +71,7 @@ const ChatMessage = ({ message }) => {
         }}
       >
         <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {message.content}
+          {displayContent}
         </div>
 
         {/* Source Citations for AI Responses */}

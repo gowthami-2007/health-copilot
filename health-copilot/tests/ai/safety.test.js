@@ -22,11 +22,11 @@ describe('AI Service: Healthcare Safety & Non-Diagnostic Boundary Tests', () => 
     assert.ok(res.safetyNotice.includes('Medication Advisory'));
   });
 
-  test('Response Sanitizer: always appends medical disclaimer', () => {
-    const rawAnswer = 'Your latest blood sugar reading was 92 mg/dL.';
+  test('Response Sanitizer: strips trailing medical disclaimer', () => {
+    const rawAnswer = 'Your latest blood sugar reading was 92 mg/dL.\n\n*Disclaimer: AI-generated information is for informational purposes only.*';
     const sanitized = sanitizeResponse(rawAnswer);
 
-    assert.ok(sanitized.includes('Disclaimer:'));
-    assert.ok(sanitized.includes('not a substitute for professional medical advice'));
+    assert.strictEqual(sanitized, 'Your latest blood sugar reading was 92 mg/dL.');
+    assert.strictEqual(sanitized.includes('Disclaimer:'), false);
   });
 });

@@ -80,7 +80,7 @@ describe('Integration Test: AI Health Assistant RAG & Conversation Flow', () => 
     assert.ok(chatResult.conversationId);
     assert.ok(chatResult.assistantMessage);
     assert.strictEqual(chatResult.assistantMessage.role, 'assistant');
-    assert.ok(chatResult.assistantMessage.content.includes('Disclaimer:'));
+    assert.strictEqual(chatResult.assistantMessage.content.includes('Disclaimer:'), false);
 
     // Check retrieved sources
     assert.ok(chatResult.sources.length > 0);

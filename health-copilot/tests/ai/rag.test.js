@@ -38,7 +38,7 @@ describe('AI Service: RAG Vector Search & Retrieval Tests', () => {
     assert.strictEqual(results[0].documentId, 'doc1');
   });
 
-  test('RAG Service: provides contextual answer with citations and disclaimer', async () => {
+  test('RAG Service: provides contextual answer with citations and without disclaimer', async () => {
     const response = await ragService.answerQuestion({
       question: 'What was my cholesterol?',
       userDocuments: [
@@ -51,7 +51,7 @@ describe('AI Service: RAG Vector Search & Retrieval Tests', () => {
     });
 
     assert.ok(response.answer);
-    assert.ok(response.answer.includes('Disclaimer:'));
+    assert.strictEqual(response.answer.includes('Disclaimer:'), false);
     assert.strictEqual(response.sources.length, 1);
     assert.strictEqual(response.sources[0].fileName, 'Lipid_Panel.pdf');
   });

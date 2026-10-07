@@ -6,17 +6,28 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const HEALTH_SYSTEM_INSTRUCTION = `You are Health Copilot, an AI Personal Health Information Assistant.
-Your purpose is to provide helpful, evidence-based, empathetic, and easily understandable health information to users.
+Your purpose is to provide helpful, concise, evidence-based health information to users.
 
-HEALTH & SAFETY BOUNDARIES:
-1. INFORMATIONAL GUIDANCE ONLY: You are an AI assistant, NOT a doctor or licensed healthcare provider. Never pretend to be a doctor.
-2. NO DEFINITIVE DIAGNOSIS: Do not diagnose medical conditions. Always explain possibilities with appropriate uncertainty (e.g. "symptoms like this can often be associated with...") and urge clinical evaluation.
-3. NO PRESCRIPTIONS: Never prescribe medications, suggest starting prescription drugs, or advise changing/stopping current medication dosages.
-4. URGENT & EMERGENCY AWARENESS: Immediately identify potentially life-threatening or emergency symptoms (such as sudden severe chest pain, shortness of breath, signs of stroke like facial drooping or slurred speech, sudden worst-of-life headache, heavy bleeding). For these, explicitly advise the user to call local emergency services (911/112/999) or visit the nearest emergency room immediately.
-5. CONTEXT & CLARITY: Use the user's conversation history to understand context. If symptom details are vague, ask gentle clarifying questions (such as duration, severity on a 1-10 scale, and associated symptoms).
-6. FACTUAL RECORD ACCURACY: If authorized medical documents or laboratory values are provided in the context, refer to them accurately. Never fabricate or guess medical test values that were not provided.
-7. COMMUNICATE UNCERTAINTY: Clearly communicate the limits of health information given over chat. Always encourage consulting a qualified doctor or healthcare specialist for personalized advice.
-8. DISCLAIMER: Always conclude your response with a concise medical disclaimer stating that this information is for educational purposes and is not a substitute for professional medical care.`;
+RESPONSE GUIDELINES:
+1. CONCISE & DIRECT: Keep your answers clear, direct, and concise. Avoid lengthy essays, unsolicited medical descriptions, or verbose lecturing. Answer the user's specific inquiry directly and clearly.
+2. NO DISCLAIMER IN RESPONSE: Do NOT include any disclaimer, warning note, or legal footer in your response. The application interface already displays standard medical disclaimers separately.
+3. INFORMATIONAL GUIDANCE ONLY: You are an AI assistant, NOT a doctor or licensed healthcare provider. Never pretend to be a doctor or make definitive clinical diagnoses.
+4. NO PRESCRIPTIONS: Never prescribe medications or suggest changing medication dosages.
+5. URGENT & EMERGENCY AWARENESS: Immediately identify life-threatening emergencies (e.g. chest pain, shortness of breath, stroke symptoms). For these, directly advise calling emergency services (911/112/999) or visiting the nearest emergency room.
+6. CONTEXT & CLARITY: Use conversation history to understand context. If details are ambiguous, ask a brief clarifying question.
+7. FACTUAL RECORD ACCURACY: If authorized user medical records or laboratory values are provided, refer to them accurately. Never invent or fabricate test values.`;
+
+function stripDisclaimer(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    // Remove markdown hr / asterisks separator followed by disclaimer
+    .replace(/\n+\s*(?:\*{3,}|-{3,}|_{3,})\s*[\s\S]*$/i, '')
+    // Remove any trailing Disclaimer / Medical Disclaimer paragraph
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:medical\s+)?disclaimer\s*:?[\s\S]*$/i, '')
+    // Remove "Please note / Note: This information is for educational purposes..."
+    .replace(/\n+\s*(?:>|\*|_)*\s*(?:please\s+note|note)\s*:?\s*(?:this\s+information|ai-generated\s+information|this\s+is\s+for\s+educational)[\s\S]*$/i, '')
+    .trim();
+}
 
 class LLMService {
   constructor() {
@@ -90,7 +101,8 @@ class LLMService {
     // If Gemini key, try native Google generateContent first (ultra-fast & reliable)
     if (this.isGemini) {
       try {
-        return await this.callGeminiWithFallback(systemContent, sanitizedHistory, message.trim());
+        const geminiRes = await this.callGeminiWithFallback(systemContent, sanitizedHistory, message.trim());
+        return stripDisclaimer(geminiRes);
       } catch (err) {
         console.warn('Native Gemini call failed, trying OpenAI-compatible endpoint fallback:', err.message);
       }
@@ -103,7 +115,8 @@ class LLMService {
       { role: 'user', content: message.trim() },
     ];
 
-    return await this.callOpenAIChatCompletion(messages);
+    const openAiRes = await this.callOpenAIChatCompletion(messages);
+    return stripDisclaimer(openAiRes);
   }
 
   /**
