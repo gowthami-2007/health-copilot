@@ -1,0 +1,15 @@
+{
+  "name": "health-copilot-document-service",
+  "version": "1.0.0",
+  "description": "Document text extraction, validation, and chunking service for Health Copilot",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test ../tests/documents/*.test.js"
+  },
+  "dependencies": {
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {},
+  "type": "commonjs"
+}

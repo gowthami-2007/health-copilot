@@ -1,0 +1,18 @@
+{
+  "name": "health-copilot-ai-service",
+  "version": "1.0.0",
+  "description": "AI summarization, RAG, and healthcare safety service for Health Copilot",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test ../tests/ai/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {},
+  "type": "commonjs"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "health-copilot-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd health-copilot && npm run dev",
+    "dev:backend": "cd health-copilot && npm run dev:backend",
+    "dev:frontend": "cd health-copilot && npm run dev:frontend",
+    "test": "cd health-copilot && npm run test",
+    "install:all": "cd health-copilot && npm run install:all"
+  }
+}

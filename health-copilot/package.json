@@ -1,0 +1,36 @@
+{
+  "name": "health-copilot",
+  "version": "1.0.0",
+  "description": "AI-Powered Personal Health Copilot - Full Stack Healthcare Management Application",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "ai-service",
+    "document-service"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../ai-service && npm install && cd ../document-service && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:ai": "cd ai-service && npm run dev",
+    "seed": "cd backend && node ../scripts/seedDemoData.js",
+    "test": "cd backend && npm test",
+    "test:all": "node scripts/runAllTests.js",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  },
+  "keywords": [
+    "healthcare",
+    "ai",
+    "copilot",
+    "mern",
+    "rag",
+    "medical-documents"
+  ],
+  "author": "Health Copilot Team",
+  "license": "MIT"
+}
