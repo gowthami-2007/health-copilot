@@ -7,7 +7,7 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import documentService from '../services/documentService';
 import { UploadCloud, Plus } from 'lucide-react';
-import Button from '../common/Button';
+import Button from '../components/common/Button';
 
 const Documents = () => {
   const [documents, setDocuments] = useState([]);

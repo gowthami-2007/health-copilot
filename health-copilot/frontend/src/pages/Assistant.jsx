@@ -5,7 +5,7 @@ import ChatWindow from '../components/assistant/ChatWindow';
 import aiService from '../services/aiService';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { Plus, MessageSquare, Trash2, Bot, Clock } from 'lucide-react';
-import Button from '../common/Button';
+import Button from '../components/common/Button';
 
 const Assistant = () => {
   const location = useLocation();

@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { successResponse } = require('../utils/apiResponse');
+const timelineController = require('../controllers/timelineController');
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/ping', (req, res) => successResponse(res, 'Timeline route active'));
+router.use(protect);
+
+router.get('/', (req, res, next) => timelineController.getTimeline(req, res, next));
 
 module.exports = router;
