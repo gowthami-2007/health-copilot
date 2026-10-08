@@ -53,7 +53,7 @@ const DocumentList = ({
         </div>
 
         {/* Search Field */}
-        <div style={{ width: '100%', maxWidth: '300px' }}>
+        <div style={{ width: '100%', maxWidth: '300px', flex: '1 1 200px' }}>
           <input
             type="text"
             className="form-input"

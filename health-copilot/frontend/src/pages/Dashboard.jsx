@@ -74,9 +74,10 @@ const Dashboard = () => {
           borderRadius: 'var(--radius-full)',
           fontSize: '0.8rem',
           fontWeight: 600,
-          color: '#065f46'
+          color: '#065f46',
+          maxWidth: '100%',
         }}>
-          <ShieldCheck size={16} />
+          <ShieldCheck size={16} style={{ flexShrink: 0 }} />
           <span>Private Patient Data Isolation Active</span>
         </div>
       </div>
@@ -121,7 +122,7 @@ const Dashboard = () => {
               Ask questions directly about your uploaded blood reports, test results, doctor instructions, and medications.
             </p>
 
-            <form onSubmit={handleAskAI} style={{ display: 'flex', gap: '0.75rem', maxWidth: '750px' }}>
+            <form onSubmit={handleAskAI} style={{ display: 'flex', gap: '0.75rem', maxWidth: '750px', flexWrap: 'wrap' }}>
               <input
                 id="dashboard-ai-input"
                 type="text"
@@ -132,7 +133,9 @@ const Dashboard = () => {
                 style={{
                   backgroundColor: '#ffffff',
                   border: '1px solid #cbd5e1',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
+                  flex: '1 1 200px',
+                  minWidth: 0,
                 }}
               />
               <button

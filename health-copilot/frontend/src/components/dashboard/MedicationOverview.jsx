@@ -68,7 +68,7 @@ const MedicationOverview = ({ medications = [] }) => {
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, overflow: 'hidden' }}>
                 <div style={{
                   width: '38px',
                   height: '38px',
@@ -82,17 +82,17 @@ const MedicationOverview = ({ medications = [] }) => {
                 }}>
                   <Pill size={18} />
                 </div>
-                <div>
-                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600 }}>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {med.name}
                   </h4>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                     Dosage: {med.dosage}
                   </span>
                 </div>
               </div>
 
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',

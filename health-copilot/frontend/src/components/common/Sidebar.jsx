@@ -34,13 +34,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
-            zIndex: 35,
-          }}
+          className="sidebar-backdrop"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
@@ -81,13 +77,6 @@ const Sidebar = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            style={{
-              display: 'none',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-muted)'
-            }}
             className="mobile-close-btn"
             aria-label="Close menu"
           >

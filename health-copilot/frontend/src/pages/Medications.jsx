@@ -101,7 +101,7 @@ const Medications = () => {
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {['ALL', 'ACTIVE', 'PAUSED', 'COMPLETED'].map((status) => (
           <button
             key={status}

@@ -225,7 +225,7 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
 
         {file ? (
           <div>
-            <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+            <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {file.name}
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -244,7 +244,7 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
         {onCancel && (
           <Button variant="secondary" onClick={onCancel}>
             Cancel

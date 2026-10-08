@@ -50,17 +50,18 @@ const HealthStats = ({ stats = { documents: 0, medications: 0, appointments: 0 }
               padding: '1.4rem 1.6rem',
               transition: 'all 0.2s ease',
               border: '1px solid var(--border-light)',
+              minWidth: 0,
             }}
           >
-            <div>
-              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {card.title}
               </p>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
                   {card.count}
                 </span>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>
                   {card.label}
                 </span>
               </div>
@@ -77,6 +78,7 @@ const HealthStats = ({ stats = { documents: 0, medications: 0, appointments: 0 }
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                marginLeft: '0.5rem',
               }}
             >
               <Icon size={26} />

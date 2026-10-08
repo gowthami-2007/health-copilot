@@ -157,88 +157,122 @@ const Assistant = () => {
     }
   };
 
+  const [showMobileHistory, setShowMobileHistory] = useState(false);
+
   const activeConv = conversations.find((c) => c._id === activeConversationId);
 
   return (
     <Layout pageTitle="AI Health Assistant">
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      {/* Mobile Toolbar (visible only <= 1024px via CSS) */}
+      <div className="assistant-mobile-toolbar">
+        <Button
+          id="mobile-new-chat-btn"
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            handleNewConversation();
+            setShowMobileHistory(false);
+          }}
+          icon={Plus}
+        >
+          New Consultation
+        </Button>
+
+        <button
+          type="button"
+          onClick={() => setShowMobileHistory((prev) => !prev)}
+          className="btn btn-secondary btn-sm"
+          style={{ gap: '0.4rem' }}
+          aria-expanded={showMobileHistory}
+        >
+          <MessageSquare size={15} />
+          <span>Consultations ({conversations.length})</span>
+        </button>
+      </div>
+
+      <div className="assistant-layout-grid">
         {/* Conversations History Sidebar */}
-        <div className="card" style={{ padding: '1.25rem', height: 'calc(100vh - 180px)', minHeight: '550px', display: 'flex', flexDirection: 'column' }}>
-          <Button
-            id="new-chat-btn"
-            variant="primary"
-            onClick={handleNewConversation}
-            icon={Plus}
-            style={{ width: '100%', marginBottom: '1.25rem' }}
-          >
-            New Consultation
-          </Button>
+        <div className={`assistant-history-container ${showMobileHistory ? 'show-mobile' : ''}`}>
+          <div className="card assistant-history-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            <Button
+              id="new-chat-btn"
+              variant="primary"
+              onClick={handleNewConversation}
+              icon={Plus}
+              style={{ width: '100%', marginBottom: '1.25rem' }}
+            >
+              New Consultation
+            </Button>
 
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
-            Consultation History
-          </div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+              Consultation History
+            </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {conversations.length === 0 ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', textAlign: 'center', marginTop: '2rem' }}>
-                No prior conversations. Ask a question to begin.
-              </p>
-            ) : (
-              conversations.map((c) => {
-                const isActive = c._id === activeConversationId;
-                return (
-                  <div
-                    key={c._id}
-                    onClick={() => setActiveConversationId(c._id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
-                      color: isActive ? 'var(--primary-dark)' : 'var(--text-main)',
-                      fontWeight: isActive ? 600 : 400,
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      transition: 'all 0.15s ease',
-                      border: `1px solid ${isActive ? 'var(--primary-light)' : 'transparent'}`,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                      <MessageSquare size={15} style={{ flexShrink: 0 }} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {c.title}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteConversation(e, c._id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-subtle)',
-                        cursor: 'pointer',
-                        padding: '0.2rem',
-                        display: 'flex',
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {conversations.length === 0 ? (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', textAlign: 'center', marginTop: '2rem' }}>
+                  No prior conversations. Ask a question to begin.
+                </p>
+              ) : (
+                conversations.map((c) => {
+                  const isActive = c._id === activeConversationId;
+                  return (
+                    <div
+                      key={c._id}
+                      onClick={() => {
+                        setActiveConversationId(c._id);
+                        setShowMobileHistory(false);
                       }}
-                      title="Delete conversation"
-                      aria-label="Delete conversation"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                        color: isActive ? 'var(--primary-dark)' : 'var(--text-main)',
+                        fontWeight: isActive ? 600 : 400,
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        transition: 'all 0.15s ease',
+                        border: `1px solid ${isActive ? 'var(--primary-light)' : 'transparent'}`,
+                      }}
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                );
-              })
-            )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                        <MessageSquare size={15} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.title}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteConversation(e, c._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-subtle)',
+                          cursor: 'pointer',
+                          padding: '0.2rem',
+                          display: 'flex',
+                        }}
+                        title="Delete conversation"
+                        aria-label="Delete conversation"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
         {/* Chat Window */}
-        <div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           <ChatWindow
             messages={messages}
             isLoading={sendingQuery || loadingMessages}

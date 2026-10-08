@@ -85,7 +85,7 @@ const RecentDocuments = ({ documents = [] }) => {
                 e.currentTarget.style.backgroundColor = '#ffffff';
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, overflow: 'hidden' }}>
                 <div style={{
                   width: '38px',
                   height: '38px',
@@ -99,22 +99,22 @@ const RecentDocuments = ({ documents = [] }) => {
                 }}>
                   <FileText size={18} />
                 </div>
-                <div>
-                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600 }}>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {doc.fileName}
                   </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', overflow: 'hidden' }}>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', flexShrink: 0 }}>
                       {doc.documentType || 'Medical Report'}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>
                       {new Date(doc.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div>
+              <div style={{ flexShrink: 0 }}>
                 {getStatusBadge(doc.status)}
               </div>
             </Link>

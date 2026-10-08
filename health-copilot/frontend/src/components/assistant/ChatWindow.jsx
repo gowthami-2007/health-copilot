@@ -22,29 +22,32 @@ const ChatWindow = ({
 
   return (
     <div
-      className="card"
+      className="card chat-window-card"
       style={{
-        height: 'calc(100vh - 180px)',
-        minHeight: '550px',
         display: 'flex',
         flexDirection: 'column',
         padding: 0,
         overflow: 'hidden',
         backgroundColor: '#ffffff',
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
       }}
     >
       {/* Chat Header */}
       <div
         style={{
-          padding: '1rem 1.5rem',
+          padding: '0.85rem 1.25rem',
           borderBottom: '1px solid var(--border-light)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           backgroundColor: '#fafcff',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
           <div
             style={{
               width: '36px',
@@ -55,21 +58,22 @@ const ChatWindow = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Bot size={20} />
           </div>
-          <div>
-            <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700, color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
               {conversationTitle}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <ShieldCheck size={12} color="#10b981" /> Powered by RAG • Patient Vault Isolation Active
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <ShieldCheck size={12} color="#10b981" style={{ flexShrink: 0 }} /> Powered by RAG • Vault Isolation Active
             </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
           <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
             Health Copilot AI
           </span>
@@ -81,10 +85,11 @@ const ChatWindow = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '1.5rem',
+          padding: '1.25rem',
           backgroundColor: '#f8fafc',
           display: 'flex',
           flexDirection: 'column',
+          minWidth: 0,
         }}
       >
         {messages.length === 0 ? (
@@ -125,7 +130,7 @@ const ChatWindow = ({
             <SuggestedQuestions onSelectQuestion={onSendMessage} />
           </div>
         ) : (
-          <div>
+          <div style={{ minWidth: 0, width: '100%' }}>
             {messages.map((msg, index) => (
               <ChatMessage key={msg._id || index} message={msg} />
             ))}
@@ -142,6 +147,7 @@ const ChatWindow = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
                   <Bot size={18} />
@@ -170,10 +176,10 @@ const ChatWindow = ({
       </div>
 
       {/* Input Tray */}
-      <div style={{ padding: '1rem 1.5rem', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-light)' }}>
+      <div style={{ padding: '0.85rem 1.25rem', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-light)', boxSizing: 'border-box', width: '100%' }}>
         <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} />
         <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', display: 'block', lineHeight: 1.4 }}>
             AI-generated information is informational only. Does not diagnose or prescribe. Consult a licensed doctor for medical care.
           </span>
         </div>

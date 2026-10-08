@@ -61,7 +61,7 @@ const UpcomingAppointments = ({ appointments = [] }) => {
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, overflow: 'hidden' }}>
                 <div style={{
                   width: '38px',
                   height: '38px',
@@ -75,17 +75,17 @@ const UpcomingAppointments = ({ appointments = [] }) => {
                 }}>
                   <UserCheck size={18} />
                 </div>
-                <div>
-                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600 }}>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <h4 style={{ fontSize: '0.925rem', color: 'var(--text-main)', margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {apt.doctorName}
                   </h4>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {apt.specialty || 'General Practitioner'}
                   </p>
                 </div>
               </div>
 
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'flex-end', fontSize: '0.825rem', fontWeight: 600, color: 'var(--text-main)' }}>
                   <Calendar size={13} color="var(--primary)" />
                   <span>{new Date(apt.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>

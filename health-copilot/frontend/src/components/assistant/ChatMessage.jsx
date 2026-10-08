@@ -46,31 +46,32 @@ const ChatMessage = ({ message }) => {
 
       {/* Bubble Content */}
       <div
+        className="chat-message-bubble"
         style={{
-          maxWidth: '80%',
           backgroundColor: isUser
             ? 'var(--primary)'
             : message.isError
-            ? '#fef2f2'
-            : '#ffffff',
+              ? '#fef2f2'
+              : '#ffffff',
           color: isUser
             ? '#ffffff'
             : message.isError
-            ? '#991b1b'
-            : 'var(--text-main)',
+              ? '#991b1b'
+              : 'var(--text-main)',
           padding: '1rem 1.25rem',
           borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
           boxShadow: isUser ? '0 2px 6px rgba(2, 132, 199, 0.2)' : 'var(--shadow-sm)',
           border: isUser
             ? 'none'
             : message.isError
-            ? '1px solid #fecaca'
-            : '1px solid var(--border-light)',
+              ? '1px solid #fecaca'
+              : '1px solid var(--border-light)',
           fontSize: '0.925rem',
           lineHeight: 1.6,
+          minWidth: 0,
         }}
       >
-        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           {displayContent}
         </div>
 
@@ -103,12 +104,14 @@ const ChatMessage = ({ message }) => {
                     color: 'var(--primary)',
                     textDecoration: 'none',
                     fontWeight: 600,
+                    maxWidth: '100%',
+                    overflow: 'hidden',
                   }}
                   title={src.excerpt || src.fileName}
                 >
-                  <FileText size={12} />
-                  <span>{src.fileName}</span>
-                  <ExternalLink size={10} />
+                  <FileText size={12} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{src.fileName}</span>
+                  <ExternalLink size={10} style={{ flexShrink: 0 }} />
                 </Link>
               ))}
             </div>

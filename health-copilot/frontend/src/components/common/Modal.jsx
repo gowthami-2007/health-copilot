@@ -36,14 +36,13 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = '550px' }) => {
       onClick={onClose}
     >
       <div
-        className="card animate-fade-in"
+        className="card modal-content-card animate-fade-in"
         style={{
           width: '100%',
           maxWidth,
           backgroundColor: '#ffffff',
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-xl)',
-          padding: '1.75rem',
           maxHeight: '90vh',
           overflowY: 'auto',
           position: 'relative',
