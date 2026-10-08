@@ -9,7 +9,7 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import dashboardService from '../services/dashboardService';
 import useAuth from '../hooks/useAuth';
-import { Bot, ArrowRight, Sparkles, Activity, ShieldCheck, Plus } from 'lucide-react';
+import { Bot, ArrowRight, Sparkles, Activity, Plus } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -63,23 +63,6 @@ const Dashboard = () => {
             Here is your centralized personal health overview and AI assistance.
           </p>
         </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          backgroundColor: '#ecfdf5',
-          border: '1px solid #a7f3d0',
-          padding: '0.45rem 0.85rem',
-          borderRadius: 'var(--radius-full)',
-          fontSize: '0.8rem',
-          fontWeight: 600,
-          color: '#065f46',
-          maxWidth: '100%',
-        }}>
-          <ShieldCheck size={16} style={{ flexShrink: 0 }} />
-          <span>Private Patient Data Isolation Active</span>
-        </div>
       </div>
 
       {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
@@ -113,9 +96,6 @@ const Dashboard = () => {
               <h3 style={{ fontSize: '1.1rem', margin: 0, color: '#312e81' }}>
                 AI Health Assistant
               </h3>
-              <span className="badge" style={{ backgroundColor: '#ffffff', color: '#4338ca', fontSize: '0.72rem' }}>
-                RAG Enabled
-              </span>
             </div>
 
             <p style={{ fontSize: '0.875rem', color: '#475569', marginBottom: '1rem', maxWidth: '750px' }}>

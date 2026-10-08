@@ -2,20 +2,16 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HeartPulse,
-  ShieldCheck,
   Bot,
   FileText,
   Pill,
   Calendar,
   Clock,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
-  Lock,
   Stethoscope,
   Activity,
 } from 'lucide-react';
-import Button from '../components/common/Button';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -81,24 +77,6 @@ const Landing = () => {
         overflow: 'hidden',
       }}>
         <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.4rem 1rem',
-            backgroundColor: '#ffffff',
-            border: '1px solid #bae6fd',
-            borderRadius: 'var(--radius-full)',
-            color: 'var(--primary)',
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            marginBottom: '1.5rem',
-            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.1)'
-          }}>
-            <Sparkles size={16} />
-            <span>AI-Powered Personal Health Intelligence</span>
-          </div>
-
           <h1 style={{
             fontSize: '3.25rem',
             fontWeight: 800,
@@ -129,34 +107,6 @@ const Landing = () => {
             <Link to="/register" className="btn btn-primary btn-lg">
               Get Started Free <ArrowRight size={18} />
             </Link>
-            <Link to="/login" className="btn btn-secondary btn-lg">
-              Demo Account Login
-            </Link>
-          </div>
-
-          {/* Trust Highlights */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '2rem',
-            marginTop: '3rem',
-            flexWrap: 'wrap',
-            fontSize: '0.875rem',
-            color: 'var(--text-muted)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <ShieldCheck size={18} color="#10b981" />
-              <span>Strict Patient Data Isolation</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Lock size={18} color="var(--primary)" />
-              <span>End-to-End JWT Encryption</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Bot size={18} color="var(--accent)" />
-              <span>RAG Document Retrieval</span>
-            </div>
           </div>
         </div>
       </section>
@@ -235,32 +185,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Mandatory Healthcare Advisory Section */}
-      <section style={{ backgroundColor: '#ffffff', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', padding: '3.5rem 2rem' }}>
-        <div style={{ maxWidth: '850px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.4rem 0.85rem',
-            backgroundColor: '#fffbeb',
-            border: '1px solid #fde68a',
-            color: '#92400e',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            marginBottom: '1rem',
-          }}>
-            <span>IMPORTANT HEALTHCARE DISCLAIMER</span>
-          </div>
-          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>
-            Informational Healthcare Organization Assistant
-          </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.7 }}>
-            "AI-generated information is for informational and organizational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Health Copilot does not diagnose diseases, recommend changing medication dosages, or provide emergency medical care. Always verify clinical findings with a qualified healthcare professional."
-          </p>
-        </div>
-      </section>
+
 
       {/* Footer */}
       <footer style={{ padding: '2.5rem 2rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 'auto' }}>
