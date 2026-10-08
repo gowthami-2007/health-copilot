@@ -202,6 +202,7 @@ a:hover {
   transition: all var(--transition-fast);
   white-space: nowrap;
   user-select: none;
+  text-decoration: none;
 }
 
 .btn:disabled {
@@ -212,46 +213,62 @@ a:hover {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, #0284c7 100%);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary:visited {
   background: linear-gradient(135deg, var(--primary-hover) 0%, #0369a1 100%);
+  color: #ffffff !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px var(--primary-glow);
 }
 
 .btn-secondary {
   background-color: #ffffff;
-  color: var(--text-main);
+  color: var(--text-main) !important;
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-xs);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+.btn-secondary:visited {
   background-color: var(--bg-card-hover);
+  color: var(--text-main) !important;
   border-color: #cbd5e1;
 }
 
 .btn-accent {
   background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 4px 12px var(--accent-glow);
 }
 
-.btn-accent:hover {
+.btn-accent:hover,
+.btn-accent:focus,
+.btn-accent:active,
+.btn-accent:visited {
+  color: #ffffff !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px var(--accent-glow);
 }
 
 .btn-danger {
   background-color: var(--danger);
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
-.btn-danger:hover {
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active,
+.btn-danger:visited {
   background-color: #dc2626;
+  color: #ffffff !important;
 }
 
 .btn-sm {
