@@ -1,0 +1,49 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: health-copilot-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: health_copilot
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: health-copilot-backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      MONGODB_URI: mongodb://mongodb:27017/health_copilot
+      JWT_SECRET: ${JWT_SECRET:-health_copilot_super_secure_jwt_secret_key_2026}
+      JWT_EXPIRES_IN: 7d
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_MODEL: ${AI_MODEL:-gemini-1.5-flash}
+      AI_API_BASE: ${AI_API_BASE:-https://generativelanguage.googleapis.com/v1beta}
+    ports:
+      - "5001:5001"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: health-copilot-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  uploads_data:
