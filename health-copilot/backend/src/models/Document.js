@@ -17,6 +17,10 @@ const documentSchema = new mongoose.Schema(
       type: String,
       required: [true, 'File URL is required'],
     },
+    storagePath: {
+      type: String,
+      default: '',
+    },
     fileType: {
       type: String,
       required: true,

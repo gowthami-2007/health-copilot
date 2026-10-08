@@ -2,9 +2,30 @@ import React from 'react';
 import { ExternalLink, Download, FileText, Image } from 'lucide-react';
 import Button from '../common/Button';
 
-const DocumentViewer = ({ fileUrl, fileName, fileType }) => {
+const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
   const isPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
   const isImage = fileType?.includes('image') || /\.(png|jpe?g)$/i.test(fileName || '');
+
+  // Obtain current session's JWT token
+  const token = localStorage.getItem('health_copilot_token');
+  const apiBase = (import.meta.env.VITE_API_URL || 'https://health-copilot-pv0y.onrender.com/api').replace(/\/+$/, '');
+
+  // Construct secure, authenticated file streaming endpoints
+  let viewUrl = '';
+  let downloadUrl = '';
+
+  if (documentId) {
+    viewUrl = `${apiBase}/documents/${documentId}/file?token=${encodeURIComponent(token || '')}`;
+    downloadUrl = `${apiBase}/documents/${documentId}/download?token=${encodeURIComponent(token || '')}`;
+  } else if (fileUrl) {
+    if (fileUrl.startsWith('http')) {
+      viewUrl = token ? `${fileUrl}${fileUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : fileUrl;
+    } else {
+      const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+      viewUrl = `${apiBase}${cleanPath}?token=${encodeURIComponent(token || '')}`;
+    }
+    downloadUrl = viewUrl;
+  }
 
   return (
     <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '500px' }}>
@@ -24,7 +45,7 @@ const DocumentViewer = ({ fileUrl, fileName, fileType }) => {
         </div>
 
         <a
-          href={fileUrl}
+          href={viewUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-secondary btn-sm"
@@ -47,7 +68,7 @@ const DocumentViewer = ({ fileUrl, fileName, fileType }) => {
       }}>
         {isPdf ? (
           <iframe
-            src={`${fileUrl}#toolbar=0`}
+            src={`${viewUrl}#toolbar=0`}
             title={fileName}
             width="100%"
             height="100%"
@@ -55,7 +76,7 @@ const DocumentViewer = ({ fileUrl, fileName, fileType }) => {
           />
         ) : isImage ? (
           <img
-            src={fileUrl}
+            src={viewUrl}
             alt={fileName}
             style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', padding: '0.5rem' }}
           />
@@ -63,7 +84,7 @@ const DocumentViewer = ({ fileUrl, fileName, fileType }) => {
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <FileText size={48} color="var(--text-subtle)" style={{ marginBottom: '0.5rem' }} />
             <p>Preview not directly supported in this browser.</p>
-            <a href={fileUrl} download className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }}>
+            <a href={downloadUrl} download className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }}>
               <Download size={14} /> Download File
             </a>
           </div>

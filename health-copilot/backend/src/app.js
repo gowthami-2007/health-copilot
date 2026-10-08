@@ -45,8 +45,14 @@ if (config.nodeEnv !== 'test') {
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// Static directory for uploaded documents
-app.use('/uploads', express.static(config.uploadDir));
+// Block public unauthenticated access to uploaded documents (enforces strict patient privacy)
+app.use('/uploads', (req, res) => {
+  return res.status(401).json({
+    success: false,
+    message: 'Direct unauthenticated file access is blocked. Please access files via /api/documents/:id/file.',
+    error: 'UNAUTHORIZED'
+  });
+});
 
 // Rate limiter for general API routes
 const apiLimiter = rateLimit({

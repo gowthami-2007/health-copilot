@@ -241,6 +241,7 @@ const DocumentDetails = () => {
 
           <div>
             <DocumentViewer
+              documentId={document._id}
               fileUrl={document.fileUrl}
               fileName={document.fileName}
               fileType={document.fileType}
@@ -252,6 +253,7 @@ const DocumentDetails = () => {
       {activeTab === 'preview' && (
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <DocumentViewer
+            documentId={document._id}
             fileUrl={document.fileUrl}
             fileName={document.fileName}
             fileType={document.fileType}

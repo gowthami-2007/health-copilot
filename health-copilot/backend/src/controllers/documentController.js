@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const documentService = require('../services/documentService');
 const { validateDocumentUpload } = require('../validators/documentValidator');
 const { successResponse } = require('../utils/apiResponse');
@@ -37,6 +39,30 @@ class DocumentController {
     try {
       const doc = await documentService.getDocumentById(req.params.id, req.user.id);
       return successResponse(res, 'Document details retrieved successfully', doc, 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFile(req, res, next) {
+    try {
+      const { doc, filePath } = await documentService.getDocumentFile(req.params.id, req.user.id);
+
+      res.setHeader('Content-Type', doc.fileType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.fileName)}"`);
+      res.setHeader('Cache-Control', 'private, max-age=86400');
+
+      return res.sendFile(filePath);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async downloadFile(req, res, next) {
+    try {
+      const { doc, filePath } = await documentService.getDocumentFile(req.params.id, req.user.id);
+
+      return res.download(filePath, doc.fileName);
     } catch (error) {
       next(error);
     }

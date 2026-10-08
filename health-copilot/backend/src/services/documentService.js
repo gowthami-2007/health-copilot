@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('../config/env');
 const Document = require('../models/Document');
 const Timeline = require('../models/Timeline');
 const aiServiceClient = require('./aiServiceClient');
@@ -8,20 +9,65 @@ const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/err
 
 class DocumentService {
   /**
+   * Resolves the verified physical server path for a document, preventing path traversal.
+   * Checks user-isolated directory first, then legacy/seed path.
+   */
+  resolvePhysicalPath(doc) {
+    if (!doc) return null;
+
+    const rawFileName = doc.storagePath || doc.fileUrl || '';
+    const fileName = path.basename(rawFileName);
+    if (!fileName) return null;
+
+    // 1. Check user-specific subdirectory: uploads/<userId>/<fileName>
+    const userSpecificPath = path.resolve(config.uploadDir, doc.userId.toString(), fileName);
+    if (userSpecificPath.startsWith(config.uploadDir) && fs.existsSync(userSpecificPath)) {
+      return userSpecificPath;
+    }
+
+    // 2. Check storagePath directly if defined
+    if (doc.storagePath) {
+      const explicitPath = path.resolve(config.uploadDir, doc.storagePath);
+      if (explicitPath.startsWith(config.uploadDir) && fs.existsSync(explicitPath)) {
+        return explicitPath;
+      }
+    }
+
+    // 3. Fallback to flat upload directory: uploads/<fileName> (for demo/seed files)
+    const legacyPath = path.resolve(config.uploadDir, fileName);
+    if (legacyPath.startsWith(config.uploadDir) && fs.existsSync(legacyPath)) {
+      return legacyPath;
+    }
+
+    return null;
+  }
+
+  /**
    * Creates a new document record from an uploaded file and triggers processing.
+   * Strictly associates ownership with the authenticated userId.
    */
   async uploadDocument({ userId, file, documentType = 'Other' }) {
-    const fileUrl = `/uploads/${file.filename}`;
+    if (!file) {
+      throw new BadRequestError('No file provided for upload');
+    }
 
-    const newDoc = await Document.create({
+    const cleanFilename = path.basename(file.filename);
+    const storagePath = path.join(userId.toString(), cleanFilename);
+
+    const newDoc = new Document({
       userId,
       fileName: file.originalname,
-      fileUrl,
+      fileUrl: '/api/documents/pending/file',
+      storagePath,
       fileType: file.mimetype,
       fileSize: file.size,
       documentType,
       status: 'UPLOADED',
     });
+
+    // Canonical authenticated file streaming URL
+    newDoc.fileUrl = `/api/documents/${newDoc._id}/file`;
+    await newDoc.save();
 
     // Run processing asynchronously or immediately
     this.processDocument(newDoc._id, userId).catch((err) => {
@@ -33,6 +79,7 @@ class DocumentService {
 
   /**
    * Processes an uploaded document: text extraction, chunking, and AI summarization.
+   * Strictly enforces patient ownership before any processing.
    */
   async processDocument(documentId, userId) {
     const doc = await Document.findOne({ _id: documentId, userId });
@@ -43,7 +90,13 @@ class DocumentService {
     doc.status = 'PROCESSING';
     await doc.save();
 
-    const physicalPath = path.resolve(__dirname, '../../uploads', path.basename(doc.fileUrl));
+    const physicalPath = this.resolvePhysicalPath(doc);
+    if (!physicalPath) {
+      doc.status = 'FAILED';
+      doc.failureReason = "We couldn't locate the file on disk for processing.";
+      await doc.save();
+      return doc;
+    }
 
     try {
       // 1. Text extraction & chunking via document-service
@@ -120,40 +173,61 @@ class DocumentService {
    * Gets a specific document by ID, strictly enforcing patient ownership.
    */
   async getDocumentById(documentId, userId) {
-    const doc = await Document.findById(documentId);
-    if (!doc) {
+    if (!documentId || !userId) {
       throw new NotFoundError('Document not found');
     }
 
-    // STRICT PATIENT DATA ISOLATION CHECK
-    if (doc.userId.toString() !== userId.toString()) {
-      throw new ForbiddenError('You do not have permission to access this document.');
+    // STRICT OWNER CHECK: findOne with BOTH _id and userId
+    const doc = await Document.findOne({ _id: documentId, userId });
+    if (!doc) {
+      const otherDoc = await Document.findById(documentId).select('_id userId');
+      if (otherDoc && otherDoc.userId.toString() !== userId.toString()) {
+        throw new ForbiddenError('You do not have permission to access this document.');
+      }
+      throw new NotFoundError('Document not found');
     }
 
     return doc;
   }
 
   /**
+   * Retrieves document and verified physical file path for secure streaming.
+   * Strictly enforces patient ownership before serving any file content.
+   */
+  async getDocumentFile(documentId, userId) {
+    const doc = await this.getDocumentById(documentId, userId);
+    const filePath = this.resolvePhysicalPath(doc);
+
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new NotFoundError('Physical file could not be found on the server');
+    }
+
+    return { doc, filePath };
+  }
+
+  /**
    * Deletes a document and its physical file.
+   * Verifies ownership strictly BEFORE removing file from disk.
    */
   async deleteDocument(documentId, userId) {
+    // 1. Strictly verify ownership BEFORE deleting physical file
     const doc = await this.getDocumentById(documentId, userId);
 
-    // Delete physical file from uploads folder
-    const physicalPath = path.resolve(__dirname, '../../uploads', path.basename(doc.fileUrl));
-    if (fs.existsSync(physicalPath)) {
+    // 2. Delete physical file from disk if it exists
+    const physicalPath = this.resolvePhysicalPath(doc);
+    if (physicalPath && fs.existsSync(physicalPath)) {
       try {
         fs.unlinkSync(physicalPath);
       } catch (err) {
-        console.warn(`Could not delete file from disk: ${physicalPath}`);
+        console.warn(`Could not delete file from disk: ${physicalPath}`, err.message);
       }
     }
 
-    // Remove from Timeline
-    await Timeline.deleteMany({ referenceId: doc._id });
+    // 3. Remove associated Timeline entries
+    await Timeline.deleteMany({ referenceId: doc._id, userId });
 
-    // Delete document record
-    await Document.findByIdAndDelete(documentId);
+    // 4. Secure delete document record enforcing ownership
+    await Document.findOneAndDelete({ _id: documentId, userId });
 
     return { message: 'Document and associated data deleted successfully.' };
   }

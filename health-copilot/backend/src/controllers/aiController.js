@@ -1,7 +1,7 @@
 const aiChatService = require('../services/aiChatService');
 const aiServiceClient = require('../services/aiServiceClient');
 const Document = require('../models/Document');
-const { BadRequestError } = require('../utils/errors');
+const { BadRequestError, NotFoundError, ForbiddenError } = require('../utils/errors');
 
 class AIController {
   /**
@@ -88,7 +88,11 @@ class AIController {
       const { documentId } = req.params;
       const doc = await Document.findOne({ _id: documentId, userId: req.user.id });
       if (!doc) {
-        throw new BadRequestError('Document not found or access denied');
+        const otherDoc = await Document.findById(documentId).select('_id userId');
+        if (otherDoc && otherDoc.userId.toString() !== req.user.id.toString()) {
+          throw new ForbiddenError('You do not have permission to access or summarize this document.');
+        }
+        throw new NotFoundError('Document not found');
       }
 
       const summary = await aiServiceClient.summarizeDocument({
