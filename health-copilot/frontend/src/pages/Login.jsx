@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, Mail, Lock, ArrowRight, HeartPulse, Sparkles } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, ArrowRight, HeartPulse } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -35,12 +35,6 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleFillDemo = () => {
-    setEmail('demo@healthcopilot.com');
-    setPassword('DemoPassword123!');
-    setErrorMsg('');
   };
 
   return (
@@ -143,36 +137,10 @@ const Login = () => {
               variant="primary"
               size="lg"
               isLoading={isLoading}
-              style={{ width: '100%', marginBottom: '1rem' }}
+              style={{ width: '100%' }}
             >
               Sign In <ArrowRight size={18} />
             </Button>
-
-            {/* Quick Demo Fill Button */}
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem',
-                background: '#f8fafc',
-                border: '1px dashed #94a3b8',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--primary)',
-                fontWeight: 600,
-                fontSize: '0.825rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-            >
-              <Sparkles size={15} /> Autofill Demo Account Credentials
-            </button>
           </form>
 
           <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.875rem' }}>
