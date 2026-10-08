@@ -1,7 +1,18 @@
 const fs = require('fs');
+const path = require('path');
 const zlib = require('zlib');
-const pdfParse = require('pdf-parse');
 const { cleanText } = require('../cleaning/textCleaner');
+
+let pdfParse = null;
+try {
+  pdfParse = require('pdf-parse');
+} catch (e1) {
+  try {
+    pdfParse = require(path.resolve(__dirname, '../../../backend/node_modules/pdf-parse'));
+  } catch (e2) {
+    console.warn('pdf-parse module not found, will rely on built-in stream parser');
+  }
+}
 
 /**
  * Unescapes special characters within PDF string literals.
@@ -93,20 +104,22 @@ const extractTextFromPdf = async (filePathOrBuffer) => {
   }
 
   // 1. First attempt: standard pdf-parse
-  try {
-    const parsed = await pdfParse(dataBuffer, { max: 100 });
-    const cleaned = cleanText(parsed.text || '');
+  if (typeof pdfParse === 'function') {
+    try {
+      const parsed = await pdfParse(dataBuffer, { max: 100 });
+      const cleaned = cleanText(parsed.text || '');
 
-    if (cleaned.length > 20) {
-      return {
-        text: cleaned,
-        numPages: parsed.numpages || 1,
-        info: parsed.info || {},
-        hasText: true,
-      };
+      if (cleaned.length > 20) {
+        return {
+          text: cleaned,
+          numPages: parsed.numpages || 1,
+          info: parsed.info || {},
+          hasText: true,
+        };
+      }
+    } catch (err) {
+      console.warn(`Standard pdf-parse failed (${err.message}). Activating PDF stream recovery fallback...`);
     }
-  } catch (err) {
-    console.warn(`Standard pdf-parse failed (${err.message}). Activating PDF stream recovery fallback...`);
   }
 
   // 2. Second attempt: Resilient direct stream recovery

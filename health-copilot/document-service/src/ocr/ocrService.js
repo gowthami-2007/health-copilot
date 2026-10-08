@@ -1,5 +1,15 @@
 const fs = require('fs');
-const Tesseract = require('tesseract.js');
+const path = require('path');
+let Tesseract = null;
+try {
+  Tesseract = require('tesseract.js');
+} catch (e1) {
+  try {
+    Tesseract = require(path.resolve(__dirname, '../../../backend/node_modules/tesseract.js'));
+  } catch (e2) {
+    console.warn('tesseract.js not found, OCR disabled');
+  }
+}
 const { cleanText } = require('../cleaning/textCleaner');
 
 /**
@@ -8,6 +18,15 @@ const { cleanText } = require('../cleaning/textCleaner');
  */
 const extractTextFromImage = async (filePath) => {
   try {
+    if (!Tesseract) {
+      return {
+        text: '',
+        hasText: false,
+        isImage: true,
+        message: 'OCR engine is not available in this environment.',
+      };
+    }
+
     if (!fs.existsSync(filePath)) {
       throw new Error('Image file not found on disk');
     }
