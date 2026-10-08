@@ -11,20 +11,17 @@ if (!fs.existsSync(config.uploadDir)) {
 
 const server = http.createServer(app);
 
-const startServer = async () => {
-  try {
-    // Attempt DB connection
-    await connectDB();
+const startServer = () => {
+  server.listen(config.port, () => {
+    console.log(`🚀 Health Copilot Backend running on http://localhost:${config.port}`);
+    console.log(`📋 Environment: ${config.nodeEnv}`);
+    console.log(`📁 Upload directory: ${config.uploadDir}`);
 
-    server.listen(config.port, () => {
-      console.log(`🚀 Health Copilot Backend running on http://localhost:${config.port}`);
-      console.log(`📋 Environment: ${config.nodeEnv}`);
-      console.log(`📁 Upload directory: ${config.uploadDir}`);
+    // Connect to DB with automatic retry
+    connectDB().catch((err) => {
+      console.error('Background DB connection failed:', err.message);
     });
-  } catch (error) {
-    console.error('Fatal error starting server:', error);
-    process.exit(1);
-  }
+  });
 };
 
 // Graceful shutdown handling

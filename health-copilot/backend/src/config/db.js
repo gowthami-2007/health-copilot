@@ -3,26 +3,29 @@ const config = require('./env');
 
 let isConnected = false;
 
-const connectDB = async () => {
+const connectDB = async (retries = 15, delayMs = 4000) => {
   if (isConnected) {
     return mongoose.connection;
   }
 
-  try {
-    const conn = await mongoose.connect(config.mongodbUri, {
-      serverSelectionTimeoutMS: 10000,
-      autoIndex: true,
-    });
-    isConnected = true;
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    return conn;
-  } catch (error) {
-    console.warn(`⚠️ Warning: MongoDB connection failed (${error.message}).`);
-    console.warn(`   Running in disconnected or fallback mode. Ensure MongoDB is running at ${config.mongodbUri}`);
-    isConnected = false;
-    // Don't crash process in dev mode so the app can still serve static endpoints or test fallbacks
-    if (config.nodeEnv === 'production') {
-      throw error;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const conn = await mongoose.connect(config.mongodbUri, {
+        serverSelectionTimeoutMS: 6000,
+        autoIndex: true,
+      });
+      isConnected = true;
+      console.log(`✅ MongoDB Connected successfully: ${conn.connection.host}`);
+      return conn;
+    } catch (error) {
+      console.warn(`⚠️ MongoDB connection attempt ${attempt}/${retries} failed: ${error.message}`);
+      isConnected = false;
+      if (attempt < retries) {
+        console.log(`   Retrying connection in ${delayMs / 1000}s...`);
+        await new Promise((res) => setTimeout(res, delayMs));
+      } else {
+        console.warn(`   Could not establish MongoDB connection after ${retries} attempts.`);
+      }
     }
   }
 };
