@@ -2,7 +2,16 @@ import React from 'react';
 import { FileText, Pill, Calendar, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const HealthStats = ({ stats = { documents: 0, medications: 0, appointments: 0 } }) => {
+const HealthStats = ({
+  stats = {
+    documents: 0,
+    medications: 0,
+    appointments: 0,
+    totalLabResults: 0,
+    abnormalLabs: 0,
+    reviewRequired: 0,
+  },
+}) => {
   const cards = [
     {
       title: 'Health Documents',
@@ -11,7 +20,16 @@ const HealthStats = ({ stats = { documents: 0, medications: 0, appointments: 0 }
       color: '#0284c7',
       bg: '#e0f2fe',
       link: '/documents',
-      label: 'Uploaded records',
+      label: 'Secure vault files',
+    },
+    {
+      title: 'Lab Parameters',
+      count: stats.totalLabResults || 0,
+      icon: Activity,
+      color: stats.abnormalLabs > 0 ? '#ea580c' : '#059669',
+      bg: stats.abnormalLabs > 0 ? '#ffedd5' : '#ecfdf5',
+      link: '/documents',
+      label: stats.abnormalLabs > 0 ? `${stats.abnormalLabs} out-of-range flag(s)` : 'All normal',
     },
     {
       title: 'Active Medications',
@@ -20,21 +38,28 @@ const HealthStats = ({ stats = { documents: 0, medications: 0, appointments: 0 }
       color: '#0d9488',
       bg: '#ccfbf1',
       link: '/medications',
-      label: 'Current prescriptions',
+      label: 'Verified prescriptions',
     },
     {
-      title: 'Upcoming Appointments',
+      title: 'Upcoming Visits',
       count: stats.appointments || 0,
       icon: Calendar,
       color: '#6366f1',
       bg: '#e0e7ff',
       link: '/appointments',
-      label: 'Scheduled visits',
+      label: 'Scheduled consults',
     },
   ];
 
   return (
-    <div className="grid-3" style={{ marginBottom: '2rem' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '1rem',
+        marginBottom: '2rem',
+      }}
+    >
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (

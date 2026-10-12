@@ -31,6 +31,14 @@ export const documentService = {
     return await api.post(`/documents/${id}/process`);
   },
 
+  async updateStructuredData(id, data) {
+    return await api.put(`/documents/${id}/structured-data`, data);
+  },
+
+  async getFhirBundle(id) {
+    return await api.get(`/documents/${id}/fhir`);
+  },
+
   async deleteDocument(id) {
     return await api.delete(`/documents/${id}`);
   },

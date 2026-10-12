@@ -69,9 +69,10 @@ class LLMService {
    * @param {string} options.message - The current user message
    * @param {Array} options.history - Prior conversation history [{ role: 'user'|'assistant', content: string }]
    * @param {Array} options.documentContext - Optional user documents/chunks to ground answers
+   * @param {Array} options.images - Optional attached images [{ mimeType: string, base64: string }]
    * @returns {Promise<string>} Generated response text
    */
-  async generateResponse({ message, history = [], documentContext = [] }) {
+  async generateResponse({ message, history = [], documentContext = [], images = [] }) {
     this.reloadConfig();
 
     if (!this.apiKey) {
@@ -101,18 +102,31 @@ class LLMService {
     // If Gemini key, try native Google generateContent first (ultra-fast & reliable)
     if (this.isGemini) {
       try {
-        const geminiRes = await this.callGeminiWithFallback(systemContent, sanitizedHistory, message.trim());
+        const geminiRes = await this.callGeminiWithFallback(systemContent, sanitizedHistory, message.trim(), images);
         return stripDisclaimer(geminiRes);
       } catch (err) {
         console.warn('Native Gemini call failed, trying OpenAI-compatible endpoint fallback:', err.message);
       }
     }
 
-    // Fallback or OpenAI/Groq standard chat completions
+    // Fallback or OpenAI/Groq standard chat completions (multimodal if images present)
+    let userContent = message.trim();
+    if (images && images.length > 0) {
+      userContent = [
+        { type: 'text', text: message.trim() },
+        ...images.map((img) => ({
+          type: 'image_url',
+          image_url: {
+            url: `data:${img.mimeType || 'image/jpeg'};base64,${img.base64}`,
+          },
+        })),
+      ];
+    }
+
     const messages = [
       { role: 'system', content: systemContent },
       ...sanitizedHistory,
-      { role: 'user', content: message.trim() },
+      { role: 'user', content: userContent },
     ];
 
     const openAiRes = await this.callOpenAIChatCompletion(messages);
@@ -122,7 +136,7 @@ class LLMService {
   /**
    * Native Google Gemini generateContent with automatic model fallback
    */
-  async callGeminiWithFallback(systemInstruction, history, userPrompt) {
+  async callGeminiWithFallback(systemInstruction, history, userPrompt, images = []) {
     const candidateModels = [
       this.model || 'gemini-flash-lite-latest',
       'gemini-3.5-flash-lite',
@@ -137,9 +151,24 @@ class LLMService {
         parts: [{ text: item.content }],
       });
     }
+
+    const userParts = [{ text: userPrompt }];
+    if (images && images.length > 0) {
+      for (const img of images) {
+        if (img.base64) {
+          userParts.push({
+            inlineData: {
+              mimeType: img.mimeType || 'image/jpeg',
+              data: img.base64,
+            },
+          });
+        }
+      }
+    }
+
     contents.push({
       role: 'user',
-      parts: [{ text: userPrompt }],
+      parts: userParts,
     });
 
     let lastError = null;
@@ -221,6 +250,112 @@ class LLMService {
     }
 
     return reply.trim();
+  }
+
+  /**
+   * Generates a concise, meaningful title (3-7 words) for a chat conversation based on user messages.
+   *
+   * @param {string} userMessage - First user query or topic
+   * @param {string} assistantReply - Optional assistant response for added context
+   * @returns {Promise<string>} Cleaned 3-7 word title
+   */
+  async generateConversationTitle(userMessage, assistantReply = '') {
+    this.reloadConfig();
+
+    if (!userMessage || typeof userMessage !== 'string' || !userMessage.trim()) {
+      return 'Health Consultation';
+    }
+
+    const titleSystemInstruction = `You are a concise medical conversation title generator.
+Read the user's healthcare question and generate a short, meaningful, title of 3 to 7 words that summarizes the main health topic.
+
+STRICT RULES:
+1. Length: Exactly 3 to 7 words.
+2. Format: Return ONLY the title in Title Case or sentence case. Do NOT use quotation marks, punctuation at the end, markdown, bullets, prefixes, or explanations.
+3. Natural Language: Keep essential clinical/medical terms (e.g. "Cholesterol", "Hemoglobin", "Lisinopril", "Blood Pressure", "CBC Report", "Sleep Quality").
+4. Remove conversational filler phrases such as "Can you explain", "I want to know", "What are the", "Please tell me", "Hello", "I have uploaded".
+5. NEVER return generic titles like "New Chat", "Health Question", "AI Consultation", or "Question" if medical context exists.`;
+
+    const promptText = `User Message: "${userMessage.trim()}"` +
+      (assistantReply ? `\nAssistant Context: "${assistantReply.trim().substring(0, 300)}"` : '') +
+      `\n\nGenerate the 3-7 word title now:`;
+
+    if (!this.apiKey) {
+      return this.heuristicFallbackTitle(userMessage);
+    }
+
+    try {
+      let rawTitle = '';
+      if (this.isGemini) {
+        try {
+          rawTitle = await this.callGeminiWithFallback(titleSystemInstruction, [], promptText);
+        } catch (geminiErr) {
+          console.warn('Native Gemini title call failed, falling back to chat completion:', geminiErr.message);
+        }
+      }
+
+      if (!rawTitle) {
+        const messages = [
+          { role: 'system', content: titleSystemInstruction },
+          { role: 'user', content: promptText },
+        ];
+        rawTitle = await this.callOpenAIChatCompletion(messages);
+      }
+
+      return this.cleanGeneratedTitle(rawTitle, userMessage);
+    } catch (err) {
+      console.warn('LLM title generation failed, using intelligent heuristic fallback:', err.message);
+      return this.heuristicFallbackTitle(userMessage);
+    }
+  }
+
+  /**
+   * Sanitizes and bounds the generated title.
+   */
+  cleanGeneratedTitle(title, fallbackText = '') {
+    if (!title || typeof title !== 'string') {
+      return this.heuristicFallbackTitle(fallbackText);
+    }
+
+    let cleaned = title
+      .replace(/^["'`“”‘’]+|["'`“”‘’]+$/g, '') // Strip surrounding quotes
+      .replace(/^(Title|Topic|Chat Title|Subject):\s*/i, '') // Strip prefixes
+      .replace(/[.\n\r]+/g, ' ') // Remove newlines and trailing periods
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleaned || cleaned.length < 3) {
+      return this.heuristicFallbackTitle(fallbackText);
+    }
+
+    // Ensure within reasonable character bounds
+    if (cleaned.length > 55) {
+      cleaned = cleaned.substring(0, 52).trim() + '...';
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * Intelligent heuristic title fallback for offline or zero-LLM environments
+   */
+  heuristicFallbackTitle(rawText) {
+    if (!rawText || typeof rawText !== 'string') return 'Health Consultation';
+
+    // Remove common prefixes
+    let text = rawText.trim()
+      .replace(/^(can you|could you|please|i want to know|tell me|what are|what is|how do i|how to|i have|explain my|explain|why is my|why do i)\s+(about|the|some|a|an)?\s*/i, '')
+      .replace(/[?!.]+$/, '')
+      .trim();
+
+    if (!text) return 'Health Consultation';
+
+    // Capitalize first letter of words
+    const words = text.split(/\s+/).slice(0, 6);
+    if (words.length === 0) return 'Health Consultation';
+
+    const title = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return title.length > 45 ? `${title.substring(0, 42)}...` : title;
   }
 }
 

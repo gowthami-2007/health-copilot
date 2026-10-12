@@ -13,6 +13,10 @@ const conversationSchema = new mongoose.Schema(
       default: 'Health Consultation',
       trim: true,
     },
+    isCustomTitle: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

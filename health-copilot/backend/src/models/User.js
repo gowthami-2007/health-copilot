@@ -40,6 +40,22 @@ const userSchema = new mongoose.Schema(
       enum: ['male', 'female', 'other', 'prefer_not_to_say', ''],
       default: '',
     },
+    preferredLanguage: {
+      type: String,
+      enum: ['en', 'te'],
+      default: 'en',
+    },
+    mockAbha: {
+      abhaAddress: { type: String, default: '' },
+      abhaNumber: { type: String, default: '' },
+      isLinked: { type: Boolean, default: false },
+      linkedAt: { type: Date, default: null },
+      syncStatus: {
+        type: String,
+        enum: ['DISCONNECTED', 'LINKED', 'SYNCING', 'SIMULATED_RECORDS_ACTIVE'],
+        default: 'DISCONNECTED',
+      },
+    },
   },
   {
     timestamps: true,

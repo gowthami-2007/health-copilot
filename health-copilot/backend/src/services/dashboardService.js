@@ -14,18 +14,21 @@ class DashboardService {
       documentCount,
       activeMedicationCount,
       upcomingAppointmentCount,
+      reviewRequiredCount,
       recentDocuments,
       upcomingAppointments,
       medications,
       recentTimeline,
+      docsWithLabs,
     ] = await Promise.all([
       Document.countDocuments({ userId }),
       Medication.countDocuments({ userId, status: 'ACTIVE' }),
       Appointment.countDocuments({ userId, status: 'UPCOMING', date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
+      Document.countDocuments({ userId, 'structuredData.reviewStatus': 'REVIEW_REQUIRED' }),
       Document.find({ userId })
         .sort({ createdAt: -1 })
         .limit(5)
-        .select('fileName documentType status summary createdAt fileSize fileUrl'),
+        .select('fileName documentType status summary teluguSummary structuredData createdAt fileSize fileUrl'),
       Appointment.find({
         userId,
         status: 'UPCOMING',
@@ -39,7 +42,37 @@ class DashboardService {
       Timeline.find({ userId })
         .sort({ date: -1 })
         .limit(5),
+      Document.find({ userId, 'structuredData.labResults.0': { $exists: true } })
+        .sort({ createdAt: -1 })
+        .select('structuredData.labResults structuredData.documentDate fileName documentType createdAt'),
     ]);
+
+    let totalLabResults = 0;
+    let abnormalLabsCount = 0;
+    const recentLabObservations = [];
+
+    for (const doc of docsWithLabs) {
+      const labs = doc.structuredData?.labResults || [];
+      for (const lab of labs) {
+        totalLabResults++;
+        if (lab.abnormalFlag && lab.abnormalFlag !== 'NORMAL') {
+          abnormalLabsCount++;
+        }
+        if (recentLabObservations.length < 6) {
+          recentLabObservations.push({
+            testName: lab.testName,
+            result: lab.result,
+            unit: lab.unit,
+            referenceRange: lab.referenceRange,
+            abnormalFlag: lab.abnormalFlag,
+            interpretation: lab.interpretation,
+            documentId: doc._id,
+            documentName: doc.fileName,
+            date: doc.structuredData?.documentDate || doc.createdAt,
+          });
+        }
+      }
+    }
 
     // Determine greeting
     const hour = new Date().getHours();
@@ -61,11 +94,15 @@ class DashboardService {
         documents: documentCount,
         medications: activeMedicationCount,
         appointments: upcomingAppointmentCount,
+        totalLabResults,
+        abnormalLabs: abnormalLabsCount,
+        reviewRequired: reviewRequiredCount,
       },
       recentDocuments,
       upcomingAppointments,
       medications,
       recentTimeline,
+      recentLabObservations,
     };
   }
 }

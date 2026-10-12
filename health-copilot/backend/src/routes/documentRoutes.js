@@ -27,6 +27,12 @@ router.get('/:id/download', (req, res, next) => documentController.downloadFile(
 // AI processing & chunking (verifies ownership)
 router.post('/:id/process', (req, res, next) => documentController.process(req, res, next));
 
+// Structured medical data update / verification (verifies ownership)
+router.put('/:id/structured-data', (req, res, next) => documentController.updateStructuredData(req, res, next));
+
+// FHIR R4 Bundle mapping (verifies ownership)
+router.get('/:id/fhir', (req, res, next) => documentController.getFhirBundle(req, res, next));
+
 // Deletion (verifies ownership before deleting physical file & record)
 router.delete('/:id', (req, res, next) => documentController.delete(req, res, next));
 

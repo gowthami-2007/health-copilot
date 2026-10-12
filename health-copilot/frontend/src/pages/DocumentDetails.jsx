@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/common/Layout';
 import DocumentSummary from '../components/documents/DocumentSummary';
 import DocumentViewer from '../components/documents/DocumentViewer';
+import StructuredDataReview from '../components/documents/StructuredDataReview';
 import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Button from '../components/common/Button';
@@ -193,6 +194,26 @@ const DocumentDetails = () => {
 
         <button
           type="button"
+          onClick={() => setActiveTab('structured')}
+          style={{
+            padding: '0.65rem 1.25rem',
+            border: 'none',
+            background: 'none',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'structured' ? '2px solid var(--primary)' : '2px solid transparent',
+            color: activeTab === 'structured' ? 'var(--primary)' : 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <CheckCircle2 size={16} /> Verified Lab Values & Rx
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('preview')}
           style={{
             padding: '0.65rem 1.25rem',
@@ -236,7 +257,11 @@ const DocumentDetails = () => {
       {activeTab === 'summary' && (
         <div className="grid-2">
           <div>
-            <DocumentSummary summary={document.summary} />
+            <DocumentSummary
+              summary={document.summary}
+              teluguSummary={document.teluguSummary}
+              preferredLanguage="en"
+            />
           </div>
 
           <div>
@@ -247,6 +272,15 @@ const DocumentDetails = () => {
               fileType={document.fileType}
             />
           </div>
+        </div>
+      )}
+
+      {activeTab === 'structured' && (
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <StructuredDataReview
+            document={document}
+            onUpdateSuccess={(updatedDoc) => setDocument(updatedDoc)}
+          />
         </div>
       )}
 

@@ -2,23 +2,40 @@ import api from './api';
 
 export const aiService = {
   /**
-   * Sends user message and prior conversation history to POST /api/chat.
+   * Upload an attachment file for chat
    */
-  async sendChat(message, conversationId = null, history = []) {
-    return await api.post('/chat', {
-      message,
-      question: message,
-      conversationId,
-      history,
+  async uploadAttachment(file, onUploadProgress = null) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return await api.post('/ai/upload-attachment', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
     });
   },
 
-  async getConversations() {
-    return await api.get('/ai/conversations');
+  /**
+   * Sends user message, attachments, and prior conversation history to POST /api/chat.
+   */
+  async sendChat(message, conversationId = null, history = [], signal = null, attachments = []) {
+    return await api.post(
+      '/chat',
+      {
+        message,
+        question: message,
+        conversationId,
+        history,
+        attachments,
+      },
+      signal ? { signal } : undefined
+    );
   },
 
-  async getMessages(conversationId) {
-    return await api.get(`/ai/conversations/${conversationId}/messages`);
+  async getConversations(signal = null) {
+    return await api.get('/ai/conversations', signal ? { signal } : undefined);
+  },
+
+  async getMessages(conversationId, signal = null) {
+    return await api.get(`/ai/conversations/${conversationId}/messages`, signal ? { signal } : undefined);
   },
 
   async deleteConversation(conversationId) {

@@ -4,7 +4,24 @@ import Button from '../components/common/Button';
 import ErrorMessage from '../components/common/ErrorMessage';
 import useAuth from '../hooks/useAuth';
 import profileService from '../services/profileService';
-import { User, Mail, Calendar, Shield, Trash2, CheckCircle2, AlertTriangle, Lock } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Calendar,
+  Shield,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Globe,
+  Link2,
+  Unlink,
+  ExternalLink,
+  FileText,
+  Database,
+  Download,
+  Info,
+} from 'lucide-react';
 
 const Profile = () => {
   const { user, setUser, logout } = useAuth();
@@ -13,6 +30,7 @@ const Profile = () => {
     name: user?.name || '',
     dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '',
     gender: user?.gender || '',
+    preferredLanguage: user?.preferredLanguage || 'en',
   });
 
   const [loading, setLoading] = useState(false);
@@ -21,19 +39,102 @@ const Profile = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ABHA Sandbox state
+  const [abhaLoading, setAbhaLoading] = useState(false);
+  const [abhaAddressInput, setAbhaAddressInput] = useState('');
+  const [sampleModalOpen, setSampleModalOpen] = useState(false);
+  const [sampleRecords, setSampleRecords] = useState([]);
+  const [importingId, setImportingId] = useState(null);
+
   useEffect(() => {
     if (user) {
       setFormData({
         name: user.name || '',
         dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '',
         gender: user.gender || '',
+        preferredLanguage: user.preferredLanguage || 'en',
       });
+      setAbhaAddressInput(user.mockAbha?.abhaAddress || `${(user.email || 'patient').split('@')[0]}@abdm`);
     }
   }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLanguageChange = async (lang) => {
+    setFormData((prev) => ({ ...prev, preferredLanguage: lang }));
+    try {
+      setLoading(true);
+      const res = await profileService.updateProfile({ preferredLanguage: lang });
+      setUser(res.data.user);
+      localStorage.setItem('health_copilot_user', JSON.stringify(res.data.user));
+      setSuccessMsg(`Default language set to ${lang === 'te' ? 'Telugu (తెలుగు)' : 'English'}.`);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to update preferred language.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLinkMockAbha = async () => {
+    try {
+      setAbhaLoading(true);
+      setErrorMsg('');
+      const res = await profileService.linkMockAbha({
+        abhaAddress: abhaAddressInput || `${(user?.email || 'patient').split('@')[0]}@abdm`,
+        abhaNumber: '91-4567-8901-2345',
+      });
+      setUser(res.data.user);
+      localStorage.setItem('health_copilot_user', JSON.stringify(res.data.user));
+      setSuccessMsg('Mock ABHA address linked successfully to ABDM sandbox.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to link mock ABHA address.');
+    } finally {
+      setAbhaLoading(false);
+    }
+  };
+
+  const handleUnlinkMockAbha = async () => {
+    try {
+      setAbhaLoading(true);
+      setErrorMsg('');
+      const res = await profileService.unlinkMockAbha();
+      setUser(res.data.user);
+      localStorage.setItem('health_copilot_user', JSON.stringify(res.data.user));
+      setSuccessMsg('Mock ABHA identity unlinked.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to unlink mock ABHA.');
+    } finally {
+      setAbhaLoading(false);
+    }
+  };
+
+  const handleOpenPreview = async () => {
+    try {
+      setAbhaLoading(true);
+      const res = await profileService.getSampleAbhaRecords();
+      setSampleRecords(res.data.records || []);
+      setSampleModalOpen(true);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to fetch sample records.');
+    } finally {
+      setAbhaLoading(false);
+    }
+  };
+
+  const handleImportRecord = async (recordId) => {
+    try {
+      setImportingId(recordId);
+      await profileService.importSampleAbhaRecord(recordId);
+      setSuccessMsg('Record imported into your document vault and health timeline!');
+      setSampleModalOpen(false);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to import simulated record.');
+    } finally {
+      setImportingId(null);
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -172,6 +273,251 @@ const Profile = () => {
             </div>
           </form>
         </div>
+
+        {/* Regional Language Settings (Phase 6) */}
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Globe size={20} color="var(--primary)" /> Regional Language Settings
+            </h3>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+              Bilingual AI Copilot
+            </span>
+          </div>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+            Choose your preferred language for AI medical summaries, health interpretations, and doctor questions. Clinical lab values, decimal precision, and medication brand names are strictly preserved in their original form.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div
+              onClick={() => handleLanguageChange('en')}
+              style={{
+                border: `2px solid ${formData.preferredLanguage === 'en' ? 'var(--primary)' : 'var(--border-light)'}`,
+                backgroundColor: formData.preferredLanguage === 'en' ? '#f0f9ff' : '#ffffff',
+                borderRadius: 'var(--radius-md)',
+                padding: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: formData.preferredLanguage === 'en' ? 'var(--primary)' : 'var(--text-main)' }}>
+                  English (Default)
+                </span>
+                {formData.preferredLanguage === 'en' && <CheckCircle2 size={18} color="var(--primary)" />}
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                Plain-language clinical summaries & AI assistant consultations in standard English.
+              </p>
+            </div>
+
+            <div
+              onClick={() => handleLanguageChange('te')}
+              style={{
+                border: `2px solid ${formData.preferredLanguage === 'te' ? 'var(--primary)' : 'var(--border-light)'}`,
+                backgroundColor: formData.preferredLanguage === 'te' ? '#f0fdf4' : '#ffffff',
+                borderRadius: 'var(--radius-md)',
+                padding: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: formData.preferredLanguage === 'te' ? '#16a34a' : 'var(--text-main)' }}>
+                  తెలుగు (Telugu)
+                </span>
+                {formData.preferredLanguage === 'te' && <CheckCircle2 size={18} color="#16a34a" />}
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                తెలుగులో సమగ్ర ఆరోగ్య సారాంశాలు మరియు వివరణలు (యూనిట్లు మరియు మందుల పేర్లు యధాతథంగా ఉంటాయి).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mock ABDM / ABHA Readiness (Phase 7) */}
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Database size={20} color="#6366f1" /> ABDM / ABHA Readiness (Mock Sandbox)
+            </h3>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '0.25rem 0.6rem',
+                borderRadius: '999px',
+                backgroundColor: user?.mockAbha?.isLinked ? '#ecfdf5' : '#fef2f2',
+                color: user?.mockAbha?.isLinked ? '#059669' : '#dc2626',
+                border: `1px solid ${user?.mockAbha?.isLinked ? '#a7f3d0' : '#fecaca'}`,
+              }}
+            >
+              {user?.mockAbha?.isLinked ? '● Linked (Sandbox Mode)' : '○ Not Linked'}
+            </span>
+          </div>
+
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+            Ayushman Bharat Digital Mission (ABDM) integration prototype. Simulates federated electronic health record (EHR) discovery, consent-based record import, and FHIR R4 Bundle exchange without connecting to live government APIs.
+          </p>
+
+          {user?.mockAbha?.isLinked ? (
+            <div style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>ABHA Address</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.25rem' }}>
+                    {user?.mockAbha?.abhaAddress || 'santhosh@abdm'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>ABHA Number</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.25rem' }}>
+                    {user?.mockAbha?.abhaNumber || '91-4567-8901-2345'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Sync Status</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#059669', marginTop: '0.25rem' }}>
+                    Active Sandbox
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Button variant="primary" size="sm" icon={ExternalLink} onClick={handleOpenPreview} isLoading={abhaLoading}>
+                  Preview Simulated ABHA Records
+                </Button>
+                <Button variant="outline" size="sm" icon={Unlink} onClick={handleUnlinkMockAbha} isLoading={abhaLoading}>
+                  Unlink Mock ABHA
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+              <div className="grid-2" style={{ marginBottom: '1rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Mock ABHA Address (e.g. name@abdm)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={abhaAddressInput}
+                    onChange={(e) => setAbhaAddressInput(e.target.value)}
+                    placeholder="yourname@abdm"
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Mock 14-Digit ABHA Number</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value="91-4567-8901-2345"
+                    disabled
+                    style={{ backgroundColor: '#f1f5f9' }}
+                  />
+                </div>
+              </div>
+              <Button variant="primary" size="sm" icon={Link2} onClick={handleLinkMockAbha} isLoading={abhaLoading}>
+                Connect to Mock ABDM Sandbox
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ABHA Records Preview Modal */}
+        {sampleModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 'var(--radius-lg)',
+                maxWidth: '700px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: '1.5rem',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Database size={22} color="#6366f1" /> Simulated ABDM Health Records
+                </h3>
+                <button
+                  onClick={() => setSampleModalOpen(false)}
+                  style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ padding: '0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.825rem', color: '#166534', display: 'flex', gap: '0.5rem' }}>
+                <Info size={18} style={{ flexShrink: 0 }} />
+                <span>
+                  These simulated records demonstrate federated health data exchange. Clicking "Import to Vault" imports the synthetic report into your personal documents, extracts structured lab values, and links to your timeline.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {sampleRecords.map((rec) => (
+                  <div
+                    key={rec.id}
+                    style={{
+                      border: '1px solid var(--border-light)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '1rem',
+                      backgroundColor: '#f8fafc',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{rec.title}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {rec.facility} • {new Date(rec.recordDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#e0e7ff', color: '#4338ca' }}>
+                        {rec.type}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                      {rec.contentSummary}
+                    </p>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        Provenance: <code>{rec.provenance}</code>
+                      </span>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={Download}
+                        onClick={() => handleImportRecord(rec.id)}
+                        isLoading={importingId === rec.id}
+                      >
+                        Import to Vault
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Security & Data Privacy Section */}
         <div className="card" style={{ marginBottom: '2rem' }}>

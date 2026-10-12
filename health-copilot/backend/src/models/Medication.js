@@ -51,6 +51,16 @@ const medicationSchema = new mongoose.Schema(
       enum: ['ACTIVE', 'PAUSED', 'COMPLETED'],
       default: 'ACTIVE',
     },
+    sourceDocumentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Document',
+      default: null,
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['AUTO_EXTRACTED', 'VERIFIED', 'MANUAL'],
+      default: 'MANUAL',
+    },
   },
   {
     timestamps: true,

@@ -3,7 +3,10 @@ const path = require('path');
 const config = require('../config/env');
 const Document = require('../models/Document');
 const Timeline = require('../models/Timeline');
+const User = require('../models/User');
 const aiServiceClient = require('./aiServiceClient');
+const medicalExtractionService = require('./medicalExtractionService');
+const fhirService = require('./fhirService');
 const { processDocumentFile } = require('../../../document-service/src/processing/documentProcessor');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/errors');
 
@@ -78,7 +81,8 @@ class DocumentService {
   }
 
   /**
-   * Processes an uploaded document: text extraction, chunking, and AI summarization.
+   * Processes an uploaded document: text extraction, chunking, OCR classification,
+   * structured medical extraction, and bilingual AI summarization.
    * Strictly enforces patient ownership before any processing.
    */
   async processDocument(documentId, userId) {
@@ -99,7 +103,7 @@ class DocumentService {
     }
 
     try {
-      // 1. Text extraction & chunking via document-service
+      // 1. Text extraction & chunking via document-service (Tesseract OCR / PDF parser)
       const procResult = await processDocumentFile(physicalPath, doc.fileType, doc.fileSize);
 
       if (!procResult.success) {
@@ -112,28 +116,36 @@ class DocumentService {
       doc.extractedText = procResult.extractedText;
       doc.chunks = procResult.chunks;
 
-      // 2. Generate structured medical summary via AI service
-      const summaryResult = await aiServiceClient.summarizeDocument({
-        extractedText: procResult.extractedText,
-        documentType: doc.documentType,
-      });
+      // 2. Structured Clinical Intelligence & Bilingual Health Summaries
+      const extractionResult = await medicalExtractionService.processMedicalContent(
+        procResult.extractedText,
+        doc.documentType
+      );
 
-      doc.summary = summaryResult;
+      if (doc.documentType === 'Other' && extractionResult.classifiedType) {
+        doc.documentType = extractionResult.classifiedType;
+      }
+
+      doc.structuredData = extractionResult.structuredData;
+      doc.summary = extractionResult.summary;
+      doc.teluguSummary = extractionResult.teluguSummary;
       doc.status = 'PROCESSED';
       await doc.save();
 
-      // 3. Automatically record to Health Timeline
+      // 3. Automatically record to Health Timeline (idempotent / deduplicated)
+      await Timeline.deleteMany({ referenceId: doc._id, userId });
       await Timeline.create({
         userId,
         eventType: 'DOCUMENT',
         title: `Uploaded ${doc.documentType}`,
-        description: `Analyzed "${doc.fileName}" with AI summary generated.`,
-        date: doc.createdAt,
+        description: `Analyzed "${doc.fileName}". ${doc.structuredData.labResults?.length || 0} lab values and ${doc.structuredData.prescriptions?.length || 0} prescription(s) extracted.`,
+        date: doc.structuredData?.documentDate || doc.createdAt,
         referenceId: doc._id,
         metadata: {
           documentId: doc._id,
           fileName: doc.fileName,
           documentType: doc.documentType,
+          reviewStatus: doc.structuredData.reviewStatus,
         },
       });
 
@@ -145,6 +157,78 @@ class DocumentService {
       await doc.save();
       return doc;
     }
+  }
+
+  /**
+   * User validation and correction of structured medical data (Phase 2.4)
+   */
+  async updateStructuredData(documentId, userId, updateData) {
+    const doc = await this.getDocumentById(documentId, userId);
+
+    if (updateData.labResults) {
+      doc.structuredData.labResults = updateData.labResults;
+    }
+    if (updateData.prescriptions) {
+      doc.structuredData.prescriptions = updateData.prescriptions;
+    }
+    if (updateData.diagnoses) {
+      doc.structuredData.diagnoses = updateData.diagnoses;
+    }
+    if (updateData.documentDate) {
+      doc.structuredData.documentDate = new Date(updateData.documentDate);
+    }
+    if (updateData.healthcareProvider !== undefined) {
+      doc.structuredData.healthcareProvider = updateData.healthcareProvider;
+    }
+
+    doc.structuredData.reviewStatus = 'VERIFIED';
+
+    // Refresh summaries reflecting verified data
+    const { summary, teluguSummary } = medicalExtractionService.generateSummaries({
+      extractedText: doc.extractedText,
+      structuredData: doc.structuredData,
+      documentType: doc.documentType,
+    });
+
+    doc.summary = summary;
+    doc.teluguSummary = teluguSummary;
+    await doc.save();
+
+    // Synchronize verified prescriptions to Medication vault
+    const Medication = require('../models/Medication');
+    for (const rx of doc.structuredData.prescriptions || []) {
+      if (rx.medicationName && rx.isCurrentMedication) {
+        const existing = await Medication.findOne({ userId, name: rx.medicationName.trim() });
+        if (!existing) {
+          await Medication.create({
+            userId,
+            name: rx.medicationName.trim(),
+            dosage: rx.dosage || 'As prescribed',
+            frequency: rx.frequency || 'Once daily',
+            instructions: rx.instructions || '',
+            prescribedBy: rx.prescribingDoctor || doc.structuredData.healthcareProvider || '',
+            sourceDocumentId: doc._id,
+            verificationStatus: 'VERIFIED',
+            status: 'ACTIVE',
+          });
+        }
+      }
+    }
+
+    return doc;
+  }
+
+  /**
+   * Export document and patient record as an HL7 FHIR R4 Bundle (Phase 7.1)
+   */
+  async getFhirBundle(documentId, userId) {
+    const doc = await this.getDocumentById(documentId, userId);
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User record not found');
+    }
+
+    return fhirService.mapToFhirBundle(user, doc);
   }
 
   /**
@@ -166,7 +250,7 @@ class DocumentService {
 
     return await Document.find(query)
       .sort(sortOption)
-      .select('fileName fileUrl fileType fileSize documentType status summary failureReason createdAt');
+      .select('fileName fileUrl fileType fileSize documentType status summary teluguSummary structuredData failureReason createdAt');
   }
 
   /**

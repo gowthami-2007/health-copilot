@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/common/Layout';
 import ChatWindow from '../components/assistant/ChatWindow';
@@ -17,6 +17,19 @@ const Assistant = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingQuery, setSendingQuery] = useState(false);
   const [error, setError] = useState(null);
+  const [resetKey, setResetKey] = useState(0);
+
+  // Refs to manage race conditions and lifecycle
+  const hasInitializedSelection = useRef(false);
+  const activeConversationIdRef = useRef(activeConversationId);
+  const chatAbortControllerRef = useRef(null);
+  const messagesAbortControllerRef = useRef(null);
+  const activeRequestIdRef = useRef(0);
+
+  // Keep ref synchronized with state
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   // Load user conversations
   const fetchConversations = useCallback(async () => {
@@ -24,13 +37,18 @@ const Assistant = () => {
       const res = await aiService.getConversations();
       const list = res.data?.conversations || [];
       setConversations(list);
-      if (list.length > 0 && !activeConversationId) {
-        setActiveConversationId(list[0]._id);
+
+      // Only auto-select first conversation on initial page load if no initialPrompt is queued
+      if (!hasInitializedSelection.current) {
+        hasInitializedSelection.current = true;
+        if (list.length > 0 && !initialPrompt) {
+          setActiveConversationId(list[0]._id);
+        }
       }
     } catch (err) {
       console.error('Failed to load conversations:', err);
     }
-  }, [activeConversationId]);
+  }, [initialPrompt]);
 
   useEffect(() => {
     fetchConversations();
@@ -38,25 +56,47 @@ const Assistant = () => {
 
   // Load messages whenever activeConversationId changes
   useEffect(() => {
+    // Abort any pending message fetch from a previous conversation
+    if (messagesAbortControllerRef.current) {
+      messagesAbortControllerRef.current.abort();
+      messagesAbortControllerRef.current = null;
+    }
+
     if (!activeConversationId) {
       setMessages([]);
+      setLoadingMessages(false);
       return;
     }
+
+    const abortController = new AbortController();
+    messagesAbortControllerRef.current = abortController;
 
     const loadMessages = async () => {
       try {
         setLoadingMessages(true);
-        const res = await aiService.getMessages(activeConversationId);
-        setMessages(res.data?.messages || []);
+        const res = await aiService.getMessages(activeConversationId, abortController.signal);
+        // Only set messages if this request was not aborted and is still the active conversation
+        if (!abortController.signal.aborted && activeConversationIdRef.current === activeConversationId) {
+          setMessages(res.data?.messages || []);
+        }
       } catch (err) {
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || abortController.signal.aborted) {
+          return;
+        }
         console.error('Failed to load messages:', err);
         setError('Failed to load consultation messages');
       } finally {
-        setLoadingMessages(false);
+        if (!abortController.signal.aborted) {
+          setLoadingMessages(false);
+        }
       }
     };
 
     loadMessages();
+
+    return () => {
+      abortController.abort();
+    };
   }, [activeConversationId]);
 
   // Handle incoming initial prompt from dashboard
@@ -68,19 +108,58 @@ const Assistant = () => {
     }
   }, [initialPrompt]);
 
-  const handleSendMessage = async (question) => {
+  const handleSendMessage = async (question, localAttachments = []) => {
     const rawText = (question || '').trim();
-    if (!rawText) return;
+    if (!rawText && (!localAttachments || localAttachments.length === 0)) return;
+
+    // Abort any prior in-flight chat request
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    chatAbortControllerRef.current = abortController;
+
+    // Track this specific request
+    const requestId = ++activeRequestIdRef.current;
+    const targetConversationId = activeConversationIdRef.current;
 
     try {
       setSendingQuery(true);
       setError(null);
 
+      // 1. Upload any pending attachment files
+      const uploadedAttachments = [];
+      for (const att of localAttachments) {
+        if (att.documentId) {
+          uploadedAttachments.push(att);
+        } else if (att.file) {
+          try {
+            const upRes = await aiService.uploadAttachment(att.file);
+            const savedAttachment = upRes.data?.attachment || upRes.attachment;
+            if (savedAttachment) {
+              uploadedAttachments.push({
+                ...savedAttachment,
+                previewUrl: att.previewUrl,
+              });
+            }
+          } catch (uploadErr) {
+            console.error('Attachment upload failed:', uploadErr);
+            throw new Error(`Failed to upload ${att.fileName}: ${uploadErr.message || 'Network error'}`);
+          }
+        }
+      }
+
+      // Check for abort before proceeding
+      if (requestId !== activeRequestIdRef.current || abortController.signal.aborted) {
+        return;
+      }
+
       // Optimistic user message render
       const tempUserMsg = {
         _id: `temp-${Date.now()}`,
         role: 'user',
-        content: rawText,
+        content: rawText || (uploadedAttachments.length > 0 ? `[Attached: ${uploadedAttachments.map(a => a.fileName).join(', ')}]` : ''),
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : localAttachments,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, tempUserMsg]);
@@ -94,9 +173,21 @@ const Assistant = () => {
           content: m.content,
         }));
 
-      const res = await aiService.sendChat(rawText, activeConversationId, historyPayload);
+      const res = await aiService.sendChat(
+        rawText,
+        targetConversationId,
+        historyPayload,
+        abortController.signal,
+        uploadedAttachments
+      );
+
+      // If a newer request was dispatched or the user clicked New Consultation, drop stale response
+      if (requestId !== activeRequestIdRef.current || abortController.signal.aborted) {
+        return;
+      }
+
       const data = res.data || {};
-      const conversationId = data.conversationId;
+      const returnedConvId = data.conversationId;
       const returnedAssistantMsg = data.assistantMessage || {
         _id: `resp-${Date.now()}`,
         role: 'assistant',
@@ -104,11 +195,27 @@ const Assistant = () => {
         createdAt: new Date().toISOString(),
       };
       const returnedUserMsg = data.userMessage || tempUserMsg;
+      const newTitle = data.conversationTitle;
 
-      // If new conversation was created, update state
-      if (!activeConversationId || (conversationId && activeConversationId !== conversationId)) {
-        setActiveConversationId(conversationId);
+      // If a new conversation was created on the backend
+      if (!targetConversationId && returnedConvId) {
+        setActiveConversationId(returnedConvId);
+        // Prepend new conversation to sidebar immediately
+        setConversations((prev) => [
+          {
+            _id: returnedConvId,
+            title: newTitle || 'Health Consultation',
+            updatedAt: new Date().toISOString(),
+          },
+          ...prev.filter((c) => c._id !== returnedConvId),
+        ]);
+        // Also fetch to guarantee full synchronization
         fetchConversations();
+      } else if (newTitle && targetConversationId) {
+        // Update local conversation title immediately for the conversation
+        setConversations((prev) =>
+          prev.map((c) => (c._id === targetConversationId ? { ...c, title: newTitle } : c))
+        );
       }
 
       setMessages((prev) => [
@@ -117,6 +224,13 @@ const Assistant = () => {
         returnedAssistantMsg,
       ]);
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || abortController.signal.aborted) {
+        return;
+      }
+      if (requestId !== activeRequestIdRef.current) {
+        return;
+      }
+
       console.error('Chat error:', err);
       const friendlyError = err.message || 'The AI service took longer than expected to respond. Please try again.';
       setError(friendlyError);
@@ -133,13 +247,38 @@ const Assistant = () => {
         },
       ]);
     } finally {
-      setSendingQuery(false);
+      if (requestId === activeRequestIdRef.current) {
+        setSendingQuery(false);
+      }
     }
   };
 
   const handleNewConversation = () => {
+    // 1. Cancel any in-flight chat query or message fetch
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort();
+      chatAbortControllerRef.current = null;
+    }
+    if (messagesAbortControllerRef.current) {
+      messagesAbortControllerRef.current.abort();
+      messagesAbortControllerRef.current = null;
+    }
+
+    // 2. Invalidate active request ID so any pending resolution is ignored
+    activeRequestIdRef.current += 1;
+
+    // 3. Mark initial selection as settled so fetchConversations never forces an old conversation
+    hasInitializedSelection.current = true;
+
+    // 4. Reset active conversation and state immediately
     setActiveConversationId(null);
     setMessages([]);
+    setError(null);
+    setSendingQuery(false);
+    setLoadingMessages(false);
+
+    // 5. Increment resetKey to clear composer text, attachments, and camera states
+    setResetKey((prev) => prev + 1);
   };
 
   const handleDeleteConversation = async (e, convId) => {
@@ -278,6 +417,7 @@ const Assistant = () => {
             isLoading={sendingQuery || loadingMessages}
             onSendMessage={handleSendMessage}
             conversationTitle={activeConv?.title || 'New Health Consultation'}
+            resetKey={resetKey}
           />
         </div>
       </div>

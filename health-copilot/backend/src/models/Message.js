@@ -24,6 +24,17 @@ const messageSchema = new mongoose.Schema(
         excerpt: String,
       },
     ],
+    attachments: [
+      {
+        documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        fileName: { type: String, required: true },
+        fileType: { type: String, default: 'application/octet-stream' },
+        fileSize: { type: Number, default: 0 },
+        fileUrl: { type: String, default: '' },
+        attachmentType: { type: String, enum: ['image', 'document'], default: 'document' },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

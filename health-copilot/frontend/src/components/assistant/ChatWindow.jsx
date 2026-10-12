@@ -9,6 +9,7 @@ const ChatWindow = ({
   isLoading = false,
   onSendMessage,
   conversationTitle = 'Health Consultation',
+  resetKey = 0,
 }) => {
   const messagesEndRef = useRef(null);
 
@@ -177,7 +178,7 @@ const ChatWindow = ({
 
       {/* Input Tray */}
       <div style={{ padding: '0.85rem 1.25rem', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-light)', boxSizing: 'border-box', width: '100%' }}>
-        <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} />
+        <ChatInput key={resetKey} onSendMessage={onSendMessage} isLoading={isLoading} />
         <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', display: 'block', lineHeight: 1.4 }}>
             AI-generated information is informational only. Does not diagnose or prescribe. Consult a licensed doctor for medical care.

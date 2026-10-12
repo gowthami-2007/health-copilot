@@ -77,6 +77,24 @@ class DocumentController {
     }
   }
 
+  async updateStructuredData(req, res, next) {
+    try {
+      const doc = await documentService.updateStructuredData(req.params.id, req.user.id, req.body);
+      return successResponse(res, 'Structured clinical data verified and saved', doc, 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFhirBundle(req, res, next) {
+    try {
+      const fhirBundle = await documentService.getFhirBundle(req.params.id, req.user.id);
+      return res.status(200).json(fhirBundle);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(req, res, next) {
     try {
       const result = await documentService.deleteDocument(req.params.id, req.user.id);

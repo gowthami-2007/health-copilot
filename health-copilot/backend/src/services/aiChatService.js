@@ -1,14 +1,18 @@
+const fs = require('fs');
+const path = require('path');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Document = require('../models/Document');
 const llmService = require('./llm.service');
+const documentService = require('./documentService');
+const { processDocumentFile } = require('../../../document-service/src/processing/documentProcessor');
 const { NotFoundError, BadRequestError } = require('../utils/errors');
 
 class AIChatService {
   /**
    * Retrieves or initializes a conversation for a specific patient.
    */
-  async getOrCreateConversation(userId, conversationId = null, title = 'Health Consultation') {
+  async getOrCreateConversation(userId, conversationId = null, title = null) {
     if (conversationId) {
       const conv = await Conversation.findOne({ _id: conversationId, userId });
       if (!conv) {
@@ -17,9 +21,11 @@ class AIChatService {
       return conv;
     }
 
+    const defaultTitle = title && title.trim() ? title.trim() : 'New Consultation';
     return await Conversation.create({
       userId,
-      title: title.length > 40 ? `${title.substring(0, 37)}...` : title,
+      title: defaultTitle.length > 50 ? `${defaultTitle.substring(0, 47)}...` : defaultTitle,
+      isCustomTitle: false,
     });
   }
 
@@ -27,7 +33,23 @@ class AIChatService {
    * Lists all chat conversations belonging to the user.
    */
   async getUserConversations(userId) {
-    return await Conversation.find({ userId }).sort({ updatedAt: -1 });
+    const list = await Conversation.find({ userId }).sort({ updatedAt: -1 });
+
+    // Clean legacy long titles if they contain raw user questions
+    return list.map((c) => {
+      let title = c.title;
+      // If title is long or looks like an unformatted legacy raw query, sanitize presentation
+      if (title && !c.isCustomTitle && title.length > 35) {
+        title = llmService.heuristicFallbackTitle(title);
+      }
+      return {
+        _id: c._id,
+        userId: c.userId,
+        title: title || 'Health Consultation',
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      };
+    });
   }
 
   /**
@@ -45,11 +67,11 @@ class AIChatService {
   /**
    * Sends a user query to the real LLM pipeline with multi-turn history & user document context.
    */
-  async sendMessage({ userId, conversationId, question, message, history = [] }) {
+  async sendMessage({ userId, conversationId, question, message, history = [], attachments = [] }) {
     const rawQuery = (message || question || '').trim();
 
-    if (!rawQuery) {
-      throw new BadRequestError('Message cannot be empty');
+    if (!rawQuery && (!Array.isArray(attachments) || attachments.length === 0)) {
+      throw new BadRequestError('Message or attachment is required');
     }
 
     if (rawQuery.length > 2500) {
@@ -59,7 +81,7 @@ class AIChatService {
     // 1. Get or create conversation record
     let conversation = null;
     if (userId) {
-      conversation = await this.getOrCreateConversation(userId, conversationId, rawQuery);
+      conversation = await this.getOrCreateConversation(userId, conversationId, 'New Consultation');
     }
 
     // 2. Build multi-turn conversation context
@@ -79,8 +101,84 @@ class AIChatService {
       }));
     }
 
-    // 3. Strictly fetch user's processed medical documents if user is logged in
-    let documentContext = [];
+    // 3. Process direct attachments (uploaded documents or captured images)
+    let processedAttachments = [];
+    let attachmentImages = [];
+    let attachmentDocumentContext = [];
+
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      for (const att of attachments) {
+        if (!att) continue;
+        let docRecord = null;
+        if (att.documentId && userId) {
+          docRecord = await Document.findOne({ _id: att.documentId, userId });
+        }
+
+        const fileName = att.fileName || docRecord?.fileName || 'Attachment';
+        const fileType = att.fileType || docRecord?.fileType || 'application/octet-stream';
+        const fileSize = att.fileSize || docRecord?.fileSize || 0;
+        const fileUrl = att.fileUrl || docRecord?.fileUrl || '';
+        const attachmentType = att.attachmentType || (fileType.startsWith('image/') ? 'image' : 'document');
+
+        processedAttachments.push({
+          documentId: docRecord?._id || att.documentId || null,
+          fileName,
+          fileType,
+          fileSize,
+          fileUrl,
+          attachmentType,
+          uploadedAt: new Date(),
+        });
+
+        // If it's an image, read base64 for LLM vision if available
+        if (attachmentType === 'image' && docRecord) {
+          try {
+            const filePath = documentService.resolvePhysicalPath(docRecord);
+            if (filePath && fs.existsSync(filePath)) {
+              const fileBuf = fs.readFileSync(filePath);
+              attachmentImages.push({
+                mimeType: fileType,
+                base64: fileBuf.toString('base64'),
+              });
+            }
+          } catch (imgReadErr) {
+            console.warn('Could not read image for vision input:', imgReadErr.message);
+          }
+        }
+
+        // If it's a document (or image with extracted text), add its extracted text to context
+        if (docRecord) {
+          let extractedText = docRecord.extractedText || '';
+          if (!extractedText) {
+            try {
+              const filePath = documentService.resolvePhysicalPath(docRecord);
+              if (filePath && fs.existsSync(filePath)) {
+                const extraction = await processDocumentFile(filePath, docRecord.fileType, docRecord.fileSize);
+                if (extraction.success && extraction.extractedText) {
+                  extractedText = extraction.extractedText;
+                  docRecord.extractedText = extractedText;
+                  docRecord.status = 'PROCESSED';
+                  await docRecord.save();
+                }
+              }
+            } catch (procErr) {
+              console.warn('Error extracting text for chat attachment:', procErr.message);
+            }
+          }
+
+          if (extractedText) {
+            attachmentDocumentContext.push({
+              fileName,
+              documentType: docRecord.documentType || 'Uploaded Document',
+              text: extractedText.substring(0, 3000),
+            });
+          }
+        }
+      }
+    }
+
+    // 4. Fetch user's background processed medical documents if user is logged in
+    let documentContext = [...attachmentDocumentContext];
     if (userId) {
       const userDocs = await Document.find({
         userId,
@@ -90,30 +188,39 @@ class AIChatService {
         .limit(5)
         .select('fileName documentType extractedText createdAt');
 
-      documentContext = userDocs.map((doc) => ({
-        fileName: doc.fileName,
-        documentType: doc.documentType,
-        text: (doc.extractedText || '').substring(0, 1500),
-      }));
+      for (const doc of userDocs) {
+        // avoid duplicating attachment if already in context
+        if (!documentContext.some((d) => d.fileName === doc.fileName)) {
+          documentContext.push({
+            fileName: doc.fileName,
+            documentType: doc.documentType,
+            text: (doc.extractedText || '').substring(0, 1500),
+          });
+        }
+      }
     }
 
-    // 4. Record user message in DB if user is authenticated
+    const effectiveQuery = rawQuery || (processedAttachments.length > 0 ? `Please analyze the attached ${processedAttachments.map(a => a.fileName).join(', ')}.` : 'Hello');
+
+    // 5. Record user message in DB if user is authenticated
     let userMsg = null;
     if (conversation) {
       userMsg = await Message.create({
         conversationId: conversation._id,
         role: 'user',
-        content: rawQuery,
+        content: effectiveQuery,
+        attachments: processedAttachments,
       });
     }
 
-    // 5. Invoke Real LLM Service
+    // 6. Invoke Real LLM Service
     let generatedAnswer = '';
     try {
       generatedAnswer = await llmService.generateResponse({
-        message: rawQuery,
+        message: effectiveQuery,
         history: formattedHistory,
         documentContext,
+        images: attachmentImages,
       });
     } catch (llmError) {
       console.error('LLM generation error in AIChatService:', llmError.message);
@@ -128,7 +235,7 @@ class AIChatService {
       throw new Error('The AI service is temporarily unavailable. Please try again.');
     }
 
-    // 6. Record assistant message in DB
+    // 7. Record assistant message in DB
     let assistantMsg = null;
     if (conversation) {
       assistantMsg = await Message.create({
@@ -138,14 +245,34 @@ class AIChatService {
         sources: documentContext.map((d) => ({ fileName: d.fileName })),
       });
 
+      // 8. Dynamic Title Generation:
+      // If the conversation still has a default or un-customized title, generate a meaningful 3-7 word title
+      if (!conversation.isCustomTitle) {
+        try {
+          const generatedTitle = await llmService.generateConversationTitle(effectiveQuery, generatedAnswer);
+          if (generatedTitle && generatedTitle.trim()) {
+            conversation.title = generatedTitle.trim();
+            conversation.isCustomTitle = true;
+          }
+        } catch (titleErr) {
+          console.warn('Non-blocking title generation error:', titleErr.message);
+          // Retain intelligent heuristic title without breaking
+          if (!conversation.title || conversation.title === 'New Consultation' || conversation.title === 'Health Consultation') {
+            conversation.title = llmService.heuristicFallbackTitle(effectiveQuery);
+            conversation.isCustomTitle = true;
+          }
+        }
+      }
+
       conversation.updatedAt = new Date();
       await conversation.save();
     }
 
     return {
       conversationId: conversation?._id || null,
+      conversationTitle: conversation?.title || 'Health Consultation',
       message: generatedAnswer,
-      userMessage: userMsg || { role: 'user', content: rawQuery },
+      userMessage: userMsg || { role: 'user', content: effectiveQuery, attachments: processedAttachments },
       assistantMessage: assistantMsg || { role: 'assistant', content: generatedAnswer },
       sources: documentContext.map((d) => ({ fileName: d.fileName })),
     };

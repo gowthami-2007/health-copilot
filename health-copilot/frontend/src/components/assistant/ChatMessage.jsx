@@ -71,6 +71,49 @@ const ChatMessage = ({ message }) => {
           minWidth: 0,
         }}
       >
+        {/* Attached Images or Documents */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div style={{ marginBottom: displayContent ? '0.75rem' : 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {message.attachments.map((att, idx) => {
+              const isImg = att.attachmentType === 'image' || att.fileType?.startsWith('image/') || att.previewUrl;
+              const docUrl = att.documentId ? `/api/documents/${att.documentId}/file` : att.fileUrl || att.previewUrl;
+              return (
+                <div key={idx} style={{ maxWidth: '100%' }}>
+                  {isImg && (att.previewUrl || att.documentId) ? (
+                    <div style={{ borderRadius: '8px', overflow: 'hidden', border: isUser ? '1px solid rgba(255,255,255,0.3)' : '1px solid var(--border-light)', maxWidth: '280px', maxHeight: '200px' }}>
+                      <img
+                        src={att.previewUrl || docUrl}
+                        alt={att.fileName || 'Attachment'}
+                        style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '200px', objectFit: 'cover' }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        padding: '0.4rem 0.65rem',
+                        borderRadius: '6px',
+                        backgroundColor: isUser ? 'rgba(255, 255, 255, 0.15)' : '#f1f5f9',
+                        color: isUser ? '#ffffff' : 'var(--text-main)',
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        border: isUser ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid #e2e8f0',
+                      }}
+                    >
+                      <FileText size={14} />
+                      <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {att.fileName}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           {displayContent}
         </div>

@@ -1,19 +1,58 @@
 const aiChatService = require('../services/aiChatService');
 const aiServiceClient = require('../services/aiServiceClient');
+const documentService = require('../services/documentService');
 const Document = require('../models/Document');
 const { BadRequestError, NotFoundError, ForbiddenError } = require('../utils/errors');
 
 class AIController {
   /**
-   * Health Chat Handler. Accepts both { message, history } and { question, conversationId }.
+   * Secure upload endpoint for chat attachments (images, camera shots, PDF reports).
+   * Stores files safely with user isolation and creates a Document record.
+   */
+  async uploadAttachment(req, res, next) {
+    try {
+      if (!req.file) {
+        throw new BadRequestError('No file was uploaded');
+      }
+
+      const isImage = req.file.mimetype.startsWith('image/');
+      const documentType = isImage ? 'Other' : 'Other';
+
+      const doc = await documentService.uploadDocument({
+        userId: req.user.id,
+        file: req.file,
+        documentType,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Attachment uploaded successfully',
+        data: {
+          attachment: {
+            documentId: doc._id,
+            fileName: doc.fileName,
+            fileType: doc.fileType,
+            fileSize: doc.fileSize,
+            fileUrl: doc.fileUrl,
+            attachmentType: isImage ? 'image' : 'document',
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Health Chat Handler. Accepts message, conversationId, history, and optional attachments.
    */
   async chat(req, res, next) {
     try {
-      const { question, message, conversationId, history } = req.body;
+      const { question, message, conversationId, history, attachments } = req.body;
       const rawText = (message || question || '').trim();
 
-      if (!rawText) {
-        throw new BadRequestError('Please provide a message or question for the health assistant.');
+      if (!rawText && (!Array.isArray(attachments) || attachments.length === 0)) {
+        throw new BadRequestError('Please provide a message or attach a document/photo for the health assistant.');
       }
 
       if (rawText.length > 2500) {
@@ -26,6 +65,7 @@ class AIController {
         question: rawText,
         message: rawText,
         history,
+        attachments: Array.isArray(attachments) ? attachments : [],
       });
 
       return res.status(200).json({

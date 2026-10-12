@@ -134,6 +134,110 @@ const Dashboard = () => {
             <UpcomingAppointments appointments={data?.upcomingAppointments} />
           </div>
 
+          {/* Recent Laboratory Observations (Phase 5.1) */}
+          {data?.recentLabObservations && data.recentLabObservations.length > 0 && (
+            <div className="card" style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Activity size={20} color="var(--primary)" />
+                  <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Recent Extracted Lab Observations</h3>
+                </div>
+                <button
+                  onClick={() => navigate('/documents')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
+                  View All Reports <ArrowRight size={14} />
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border-light)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '0.6rem 0.75rem' }}>Test Parameter</th>
+                      <th style={{ padding: '0.6rem 0.75rem' }}>Observed Result</th>
+                      <th style={{ padding: '0.6rem 0.75rem' }}>Reference Interval</th>
+                      <th style={{ padding: '0.6rem 0.75rem' }}>Status</th>
+                      <th style={{ padding: '0.6rem 0.75rem' }}>Source Report</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.recentLabObservations.map((obs, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                          {obs.testName}
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                          {obs.result}
+                        </td>
+                        <td style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.825rem' }}>
+                          {obs.referenceRange || 'Standard'}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '999px',
+                              backgroundColor:
+                                obs.abnormalFlag === 'HIGH'
+                                  ? '#fef2f2'
+                                  : obs.abnormalFlag === 'LOW'
+                                  ? '#eff6ff'
+                                  : '#ecfdf5',
+                              color:
+                                obs.abnormalFlag === 'HIGH'
+                                  ? '#dc2626'
+                                  : obs.abnormalFlag === 'LOW'
+                                  ? '#2563eb'
+                                  : '#059669',
+                              border: `1px solid ${
+                                obs.abnormalFlag === 'HIGH'
+                                  ? '#fecaca'
+                                  : obs.abnormalFlag === 'LOW'
+                                  ? '#bfdbfe'
+                                  : '#a7f3d0'
+                              }`,
+                            }}
+                          >
+                            {obs.abnormalFlag || 'NORMAL'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <button
+                            onClick={() => navigate(`/documents/${obs.documentId}`)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--primary)',
+                              fontSize: '0.825rem',
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                              padding: 0,
+                            }}
+                          >
+                            {obs.documentName}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Medication Overview & Activity */}
           <div className="grid-2">
             <MedicationOverview medications={data?.medications} />
