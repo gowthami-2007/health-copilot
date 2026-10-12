@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   HeartPulse,
   Bot,
@@ -11,11 +11,13 @@ import {
   CheckCircle2,
   Stethoscope,
   Activity,
+  Sparkles,
+  ShieldCheck,
+  FileCheck2,
+  MessageSquare,
 } from 'lucide-react';
 
 const Landing = () => {
-  const navigate = useNavigate();
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: 'var(--text-main)', display: 'flex', flexDirection: 'column' }}>
       {/* Navigation Header */}
@@ -68,48 +70,130 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section style={{
-        padding: '5rem 1.5rem 4rem 1.5rem',
-        background: 'radial-gradient(ellipse at 50% 0%, #e0f2fe 0%, #f8fafc 70%)',
-        textAlign: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-          <h1 style={{
-            fontSize: '3.25rem',
-            fontWeight: 800,
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            marginBottom: '1.25rem',
-            color: '#0f172a'
-          }}>
-            Your Personal AI <span style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>Health Copilot</span>
-          </h1>
+      {/* Redesigned Hero Section */}
+      <section className="hero-section">
+        <div className="hero-grid-pattern" aria-hidden="true" />
 
-          <p style={{
-            fontSize: '1.2rem',
-            color: 'var(--text-muted)',
-            lineHeight: 1.6,
-            maxWidth: '680px',
-            margin: '0 auto 2.25rem auto'
-          }}>
-            Understand, organize, and manage your healthcare information in one secure place.
-            Transform complex blood tests and clinical notes into clear, actionable answers.
-          </p>
+        <div className="hero-container">
+          {/* Left Column: Headline, Narrative & Call-To-Action */}
+          <div className="hero-content">
+            <div className="hero-anim-badge">
+              <div className="hero-badge">
+                <span className="hero-badge-dot" />
+                <span>Next-Gen Clinical Health Intelligence</span>
+              </div>
+            </div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <Link to="/register" className="btn btn-primary btn-lg">
-              Get Started Free <ArrowRight size={18} />
-            </Link>
+            <h1 className="hero-title hero-anim-title">
+              Your Personal AI{' '}
+              <span className="hero-title-highlight">Health Copilot</span>
+            </h1>
+
+            <p className="hero-description hero-anim-desc">
+              Understand complex lab reports, track daily medications, and ask questions about your medical history — with verified answers cited directly from your personal health documents.
+            </p>
+
+            <div className="hero-actions hero-anim-actions">
+              <Link to="/register" className="btn btn-primary hero-btn-primary">
+                Get Started Free <ArrowRight size={18} />
+              </Link>
+              <Link to="/login" className="hero-btn-secondary">
+                <Sparkles size={16} style={{ color: '#0284c7' }} /> Explore Live Demo
+              </Link>
+            </div>
+
+            <div className="hero-trust-list hero-anim-trust">
+              <div className="hero-trust-item">
+                <CheckCircle2 size={16} />
+                <span>Zero Third-Party Sharing</span>
+              </div>
+              <div className="hero-trust-item">
+                <CheckCircle2 size={16} />
+                <span>Instant OCR Report Parsing</span>
+              </div>
+              <div className="hero-trust-item">
+                <CheckCircle2 size={16} />
+                <span>Cited AI Sources</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Visual Product Preview Element */}
+          <div className="hero-visual-wrapper hero-anim-visual">
+            {/* Top Floating Badge */}
+            <div className="hero-float-badge-top" aria-hidden="true">
+              <Pill size={16} />
+              <span>Active Prescription Monitored</span>
+            </div>
+
+            {/* Main Interactive Clinical Card */}
+            <div className="hero-visual-card">
+              <div className="hero-preview-header">
+                <div className="hero-preview-source">
+                  <div className="hero-preview-icon">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <div className="hero-preview-docname">Metabolic & Lipid Panel</div>
+                    <div className="hero-preview-meta">Quest Diagnostics • Extracted & Indexed</div>
+                  </div>
+                </div>
+                <div className="hero-preview-status">
+                  <Activity size={12} />
+                  <span>RAG Ready</span>
+                </div>
+              </div>
+
+              {/* Biomarker Key Metrics */}
+              <div className="hero-biomarkers">
+                <div className="hero-biomarker-chip">
+                  <div className="hero-biomarker-label">Hemoglobin</div>
+                  <div className="hero-biomarker-val">14.2 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>g/dL</span></div>
+                  <div className="hero-biomarker-tag">Optimal</div>
+                </div>
+                <div className="hero-biomarker-chip">
+                  <div className="hero-biomarker-label">Total Chol</div>
+                  <div className="hero-biomarker-val">188 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>mg/dL</span></div>
+                  <div className="hero-biomarker-tag">Normal</div>
+                </div>
+                <div className="hero-biomarker-chip">
+                  <div className="hero-biomarker-label">Vitamin D</div>
+                  <div className="hero-biomarker-val">34.8 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>ng/mL</span></div>
+                  <div className="hero-biomarker-tag">Healthy</div>
+                </div>
+              </div>
+
+              {/* AI Copilot Query & Cited Answer */}
+              <div className="hero-chat-snippet">
+                <div className="hero-chat-user">
+                  <MessageSquare size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
+                  <span>"Are my cholesterol and vitamin levels in healthy ranges?"</span>
+                </div>
+                <div className="hero-chat-ai">
+                  <div className="hero-chat-ai-header">
+                    <Bot size={14} />
+                    <span>Health Copilot Assistant</span>
+                  </div>
+                  <p className="hero-chat-ai-body">
+                    Yes. Your total cholesterol is 188 mg/dL (under the 200 mg/dL target) and Vitamin D is 34.8 ng/mL, showing consistent improvement from your previous report.
+                  </p>
+                  <div className="hero-chat-citation">
+                    <FileCheck2 size={12} />
+                    <span>Cited from Lab Report #QD-2026</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Floating Badge */}
+            <div className="hero-float-badge-bottom" aria-hidden="true">
+              <ShieldCheck size={16} />
+              <span>Strict Patient Vault Security</span>
+            </div>
           </div>
         </div>
       </section>
+
 
       {/* Core Features Grid */}
       <section style={{ padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
