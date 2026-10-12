@@ -212,12 +212,6 @@ const Landing = () => {
             >
               Get Started Free <ArrowRight size={18} />
             </button>
-
-            <div style={{ textAlign: 'center', marginTop: '0.85rem' }}>
-              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                🔒 Zero third-party data sharing • Instant OCR & RAG analysis
-              </span>
-            </div>
           </div>
         </div>
       </section>
