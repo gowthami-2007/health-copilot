@@ -1311,4 +1311,62 @@ html, body {
   .hero-form-card {
     padding: 1.5rem 1.15rem;
   }
+}
+
+/* ==========================================================================
+   FLY-IN SCROLL REVEAL ANIMATIONS FOR FEATURES GRID
+   ========================================================================== */
+
+@keyframes flyInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(45px) scale(0.95);
+  }
+  60% {
+    opacity: 0.9;
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.feature-fly-card {
+  opacity: 0;
+  transform: translateY(45px) scale(0.95);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  will-change: transform, opacity;
+  background-color: #ffffff !important;
+}
+
+.feature-fly-card.animate-fly-in {
+  animation: flyInUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.feature-fly-card:hover {
+  transform: translateY(-6px) scale(1.015) !important;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(2, 132, 199, 0.15) !important;
+  border-color: #cbd5e1 !important;
+}
+
+.features-header-fly {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.features-header-fly.animate-fly-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .feature-fly-card,
+  .features-header-fly {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
 }

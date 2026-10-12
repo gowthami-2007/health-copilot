@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HeartPulse,
@@ -31,6 +31,7 @@ const Landing = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState('Self');
   const [age, setAge] = useState('');
+  const featuresRef = useRef(null);
 
   const members = [
     { id: 'Self', label: 'Self', icon: User },
@@ -39,6 +40,30 @@ const Landing = () => {
     { id: 'Parent', label: 'Parent', icon: Users },
     { id: 'ParentInLaw', label: 'Parent In-Law', icon: Users },
   ];
+
+  // Scroll / load IntersectionObserver to trigger fly-in animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-fly-in');
+          }
+        });
+      },
+      {
+        threshold: 0.15,
+        rootMargin: '0px 0px -50px 0px',
+      }
+    );
+
+    const elements = document.querySelectorAll('.feature-fly-card, .features-header-fly');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
 
   const handleGetStarted = (e) => {
     e.preventDefault();
@@ -262,9 +287,9 @@ const Landing = () => {
 
 
       {/* Core Features Grid */}
-      <section style={{ padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <h2 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+      <section ref={featuresRef} style={{ padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div className="features-header-fly" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+          <h2 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
             One Unified Health Intelligence Platform
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: '600px', margin: '0 auto' }}>
@@ -273,62 +298,62 @@ const Landing = () => {
         </div>
 
         <div className="grid-3">
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.05s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <FileText size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Understand Health Documents</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Understand Health Documents</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               Upload laboratory blood reports, imaging scans, and clinic notes. Our extractor translates complex measurements into plain language summaries.
             </p>
           </div>
 
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.15s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#e0e7ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Bot size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Ask Questions About Your Records</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Ask Questions About Your Records</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               Chat naturally with your AI Copilot powered by Retrieval-Augmented Generation (RAG). Receive precise answers cited directly from your documents.
             </p>
           </div>
 
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.25s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#ccfbf1', color: '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Pill size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Organize Medications</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Organize Medications</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               Maintain an active list of your prescriptions, dosages, schedules, and prescriber notes. Never forget daily dosages again.
             </p>
           </div>
 
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.35s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Calendar size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Manage Appointments</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Manage Appointments</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               Schedule and monitor doctor appointments, upcoming lab tests, clinic locations, and preparation notes in one organized schedule.
             </p>
           </div>
 
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.45s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#f3e8ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Clock size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Chronological Health Timeline</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Chronological Health Timeline</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               View a connected timeline of test results, prescription additions, and clinic visits across months and years.
             </p>
           </div>
 
-          <div className="card" style={{ padding: '2rem' }}>
+          <div className="card feature-fly-card" style={{ padding: '2rem', animationDelay: '0.55s' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <Stethoscope size={24} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Doctor Discussion Prompts</h3>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 700 }}>Doctor Discussion Prompts</h3>
+            <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               Get AI-curated, proactive questions tailored to your test results so you walk into every doctor visit fully prepared.
             </p>
           </div>
