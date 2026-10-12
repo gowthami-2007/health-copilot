@@ -48,8 +48,10 @@ class DocumentController {
     try {
       const { doc, filePath } = await documentService.getDocumentFile(req.params.id, req.user.id);
 
-      res.setHeader('Content-Type', doc.fileType || 'application/octet-stream');
+      res.setHeader('Content-Type', doc.fileType || 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.fileName)}"`);
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Cache-Control', 'private, max-age=86400');
 
       return res.sendFile(filePath);

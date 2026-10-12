@@ -10,9 +10,12 @@ const { successResponse } = require('./utils/apiResponse');
 
 const app = express();
 
-// Security HTTP headers
+// Security HTTP headers (allow cross-origin iframe embedding for document preview)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+  frameguard: false,
+  contentSecurityPolicy: false,
 }));
 
 // CORS configuration

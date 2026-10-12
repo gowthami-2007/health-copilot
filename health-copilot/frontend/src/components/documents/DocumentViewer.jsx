@@ -44,15 +44,25 @@ const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
           </span>
         </div>
 
-        <a
-          href={viewUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-secondary btn-sm"
-          style={{ gap: '0.35rem' }}
-        >
-          <ExternalLink size={14} /> Open Full View
-        </a>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <a
+            href={downloadUrl}
+            download={fileName || 'document'}
+            className="btn btn-secondary btn-sm"
+            style={{ gap: '0.35rem' }}
+          >
+            <Download size={14} /> Download
+          </a>
+          <a
+            href={viewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-sm"
+            style={{ gap: '0.35rem' }}
+          >
+            <ExternalLink size={14} /> Open Full View
+          </a>
+        </div>
       </div>
 
       <div style={{
@@ -64,16 +74,36 @@ const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
         alignItems: 'center',
         justifyContent: 'center',
         border: '1px solid var(--border-light)',
-        minHeight: '450px'
+        minHeight: '450px',
+        position: 'relative',
       }}>
         {isPdf ? (
-          <iframe
-            src={`${viewUrl}#toolbar=0`}
-            title={fileName}
+          <object
+            data={`${viewUrl}#toolbar=0`}
+            type="application/pdf"
             width="100%"
             height="100%"
-            style={{ border: 'none', minHeight: '500px' }}
-          />
+            style={{ border: 'none', minHeight: '520px', width: '100%', height: '100%' }}
+          >
+            <iframe
+              src={`${viewUrl}#toolbar=0`}
+              title={fileName}
+              width="100%"
+              height="100%"
+              style={{ border: 'none', minHeight: '500px' }}
+            >
+              <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', margin: '1rem', border: '1px solid var(--border-light)' }}>
+                <FileText size={48} color="var(--primary)" style={{ marginBottom: '0.75rem' }} />
+                <h4 style={{ margin: '0 0 0.5rem 0' }}>PDF Document Ready</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                  Click below to open and review the full document in a high-resolution viewer.
+                </p>
+                <a href={viewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm" style={{ gap: '0.5rem' }}>
+                  <ExternalLink size={14} /> Open Full Document View
+                </a>
+              </div>
+            </iframe>
+          </object>
         ) : isImage ? (
           <img
             src={viewUrl}
