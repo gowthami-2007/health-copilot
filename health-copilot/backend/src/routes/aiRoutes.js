@@ -11,6 +11,7 @@ router.post('/upload-attachment', upload.single('file'), (req, res, next) => aiC
 router.post('/chat', (req, res, next) => aiController.chat(req, res, next));
 router.get('/conversations', (req, res, next) => aiController.getConversations(req, res, next));
 router.get('/conversations/:conversationId/messages', (req, res, next) => aiController.getMessages(req, res, next));
+router.put('/conversations/:conversationId', (req, res, next) => aiController.renameConversation(req, res, next));
 router.delete('/conversations/:conversationId', (req, res, next) => aiController.deleteConversation(req, res, next));
 router.post('/summarize/:documentId', (req, res, next) => aiController.summarizeDocument(req, res, next));
 

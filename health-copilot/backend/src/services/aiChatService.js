@@ -279,6 +279,23 @@ class AIChatService {
   }
 
   /**
+   * Renames a conversation title.
+   */
+  async renameConversation(conversationId, userId, newTitle) {
+    const conv = await Conversation.findOne({ _id: conversationId, userId });
+    if (!conv) {
+      throw new NotFoundError('Conversation not found or access denied');
+    }
+
+    conv.title = (newTitle || '').trim() || 'Health Consultation';
+    conv.isCustomTitle = true;
+    conv.updatedAt = new Date();
+    await conv.save();
+
+    return conv;
+  }
+
+  /**
    * Deletes a conversation and all its messages.
    */
   async deleteConversation(conversationId, userId) {

@@ -42,6 +42,10 @@ export const aiService = {
     return await api.delete(`/ai/conversations/${conversationId}`);
   },
 
+  async renameConversation(conversationId, title) {
+    return await api.put(`/ai/conversations/${conversationId}`, { title });
+  },
+
   async summarizeDocument(documentId) {
     return await api.post(`/ai/summarize/${documentId}`);
   },

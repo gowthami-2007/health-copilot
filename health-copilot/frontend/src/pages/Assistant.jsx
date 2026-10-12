@@ -4,7 +4,7 @@ import Layout from '../components/common/Layout';
 import ChatWindow from '../components/assistant/ChatWindow';
 import aiService from '../services/aiService';
 import ErrorMessage from '../components/common/ErrorMessage';
-import { Plus, MessageSquare, Trash2, Bot, Clock } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, Bot, Clock, Edit2, Check, X } from 'lucide-react';
 import Button from '../components/common/Button';
 
 const Assistant = () => {
@@ -18,6 +18,8 @@ const Assistant = () => {
   const [sendingQuery, setSendingQuery] = useState(false);
   const [error, setError] = useState(null);
   const [resetKey, setResetKey] = useState(0);
+  const [editingConvId, setEditingConvId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   // Refs to manage race conditions and lifecycle
   const hasInitializedSelection = useRef(false);
@@ -283,17 +285,47 @@ const Assistant = () => {
 
   const handleDeleteConversation = async (e, convId) => {
     e.stopPropagation();
-    if (!window.confirm('Delete this conversation history?')) return;
-
+    // Delete immediately without blocking browser alert
     try {
-      await aiService.deleteConversation(convId);
       setConversations((prev) => prev.filter((c) => c._id !== convId));
       if (activeConversationId === convId) {
         handleNewConversation();
       }
+      await aiService.deleteConversation(convId);
     } catch (err) {
-      alert('Failed to delete conversation');
+      console.error('Failed to delete conversation:', err);
     }
+  };
+
+  const handleStartRename = (e, c) => {
+    e.stopPropagation();
+    setEditingConvId(c._id);
+    setEditingTitle(c.title || '');
+  };
+
+  const handleSaveRename = async (e, convId) => {
+    e.stopPropagation();
+    const trimmed = editingTitle.trim();
+    if (!trimmed) {
+      setEditingConvId(null);
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) => (c._id === convId ? { ...c, title: trimmed } : c))
+    );
+    setEditingConvId(null);
+
+    try {
+      await aiService.renameConversation(convId, trimmed);
+    } catch (err) {
+      console.error('Failed to rename conversation:', err);
+    }
+  };
+
+  const handleCancelRename = (e) => {
+    e.stopPropagation();
+    setEditingConvId(null);
   };
 
   const [showMobileHistory, setShowMobileHistory] = useState(false);
@@ -357,6 +389,78 @@ const Assistant = () => {
               ) : (
                 conversations.map((c) => {
                   const isActive = c._id === activeConversationId;
+                  const isEditing = editingConvId === c._id;
+
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={c._id}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid var(--primary)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRename(e, c._id);
+                            if (e.key === 'Escape') handleCancelRename(e);
+                          }}
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            fontSize: '0.85rem',
+                            border: 'none',
+                            outline: 'none',
+                            background: 'transparent',
+                            color: 'var(--text-main)',
+                            minWidth: 0,
+                            padding: 0,
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveRename(e, c._id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#059669',
+                            cursor: 'pointer',
+                            padding: '0.2rem',
+                            display: 'flex',
+                          }}
+                          title="Save title"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelRename}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-subtle)',
+                            cursor: 'pointer',
+                            padding: '0.2rem',
+                            display: 'flex',
+                          }}
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={c._id}
@@ -379,29 +483,50 @@ const Assistant = () => {
                         border: `1px solid ${isActive ? 'var(--primary-light)' : 'transparent'}`,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', flex: 1, minWidth: 0 }}>
                         <MessageSquare size={15} style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {c.title}
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteConversation(e, c._id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-subtle)',
-                          cursor: 'pointer',
-                          padding: '0.2rem',
-                          display: 'flex',
-                        }}
-                        title="Delete conversation"
-                        aria-label="Delete conversation"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0, marginLeft: '0.35rem' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleStartRename(e, c)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-subtle)',
+                            cursor: 'pointer',
+                            padding: '0.2rem',
+                            display: 'flex',
+                            opacity: 0.7,
+                          }}
+                          title="Rename title"
+                          aria-label="Rename title"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteConversation(e, c._id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-subtle)',
+                            cursor: 'pointer',
+                            padding: '0.2rem',
+                            display: 'flex',
+                            opacity: 0.7,
+                          }}
+                          title="Delete conversation"
+                          aria-label="Delete conversation"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })

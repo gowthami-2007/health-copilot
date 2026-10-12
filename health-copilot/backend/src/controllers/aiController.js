@@ -123,6 +123,24 @@ class AIController {
     }
   }
 
+  async renameConversation(req, res, next) {
+    try {
+      const { title } = req.body;
+      const conversation = await aiChatService.renameConversation(
+        req.params.conversationId,
+        req.user.id,
+        title
+      );
+      return res.status(200).json({
+        success: true,
+        message: 'Conversation renamed successfully',
+        data: { conversation },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async summarizeDocument(req, res, next) {
     try {
       const { documentId } = req.params;
