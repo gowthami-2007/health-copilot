@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   HeartPulse,
   Bot,
@@ -15,16 +15,45 @@ import {
   ShieldCheck,
   FileCheck2,
   MessageSquare,
+  User,
+  Users,
+  Baby,
+  Heart,
+  HelpCircle,
+  PhoneCall,
+  Check,
+  Building2,
+  Receipt,
+  Percent,
 } from 'lucide-react';
 
 const Landing = () => {
+  const navigate = useNavigate();
+  const [selectedMember, setSelectedMember] = useState('Self');
+  const [age, setAge] = useState('');
+  const [phone, setPhone] = useState('');
+  const [pincode, setPincode] = useState('');
+
+  const members = [
+    { id: 'Self', label: 'Self', icon: User },
+    { id: 'Spouse', label: 'Spouse', icon: Heart },
+    { id: 'Child', label: 'Child', icon: Baby },
+    { id: 'Parent', label: 'Parent', icon: Users },
+    { id: 'ParentInLaw', label: 'Parent In-Law', icon: Users },
+  ];
+
+  const handleGetStarted = (e) => {
+    e.preventDefault();
+    navigate('/register');
+  };
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: 'var(--text-main)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', color: 'var(--text-main)', display: 'flex', flexDirection: 'column' }}>
       {/* Navigation Header */}
       <nav style={{
         height: '75px',
         borderBottom: '1px solid var(--border-light)',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
         backdropFilter: 'blur(10px)',
         position: 'sticky',
         top: 0,
@@ -48,12 +77,19 @@ const Landing = () => {
           }}>
             <HeartPulse size={24} />
           </div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
             Health<span style={{ color: 'var(--primary)' }}>Copilot</span>
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <a
+            href="#faq"
+            className="btn btn-secondary btn-sm"
+            style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #e2e8f0' }}
+          >
+            <HelpCircle size={15} /> FAQs
+          </a>
           <Link
             to="/login"
             className="btn btn-secondary btn-sm"
@@ -70,129 +106,191 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Redesigned Hero Section */}
+      {/* Hero Section matching Acko UI layout */}
       <section className="hero-section">
         <div className="hero-grid-pattern" aria-hidden="true" />
 
         <div className="hero-container">
-          {/* Left Column: Headline, Narrative & Call-To-Action */}
-          <div className="hero-content">
-            <div className="hero-anim-badge">
-              <div className="hero-badge">
-                <span className="hero-badge-dot" />
-                <span>Next-Gen Clinical Health Intelligence</span>
-              </div>
-            </div>
-
-            <h1 className="hero-title hero-anim-title">
-              Your Personal AI{' '}
-              <span className="hero-title-highlight">Health Copilot</span>
+          {/* Left Column: Heading + Joyful Family Visual with Surrounding Badges */}
+          <div className="hero-left-col">
+            <h1 className="hero-title">
+              Health intelligence for people who don't compromise
             </h1>
 
-            <p className="hero-description hero-anim-desc">
-              Understand complex lab reports, track daily medications, and ask questions about your medical history — with verified answers cited directly from your personal health documents.
-            </p>
-
-            <div className="hero-actions hero-anim-actions">
-              <Link to="/register" className="btn btn-primary hero-btn-primary">
-                Get Started Free <ArrowRight size={18} />
-              </Link>
-              <Link to="/login" className="hero-btn-secondary">
-                <Sparkles size={16} style={{ color: '#0284c7' }} /> Explore Live Demo
-              </Link>
-            </div>
-
-            <div className="hero-trust-list hero-anim-trust">
-              <div className="hero-trust-item">
-                <CheckCircle2 size={16} />
-                <span>Zero Third-Party Sharing</span>
+            <div className="hero-image-stage">
+              {/* Badge 1: Top Center */}
+              <div className="hero-pill-badge hero-pill-top-center">
+                <span className="hero-pill-badge-title">
+                  <span className="hero-pill-badge-highlight">No</span> room
+                </span>
+                <span className="hero-pill-badge-sub">rent limits</span>
               </div>
-              <div className="hero-trust-item">
-                <CheckCircle2 size={16} />
-                <span>Instant OCR Report Parsing</span>
+
+              {/* Badge 2: Mid Right */}
+              <div className="hero-pill-badge hero-pill-mid-right">
+                <span className="hero-pill-badge-title" style={{ color: '#059669' }}>
+                  100%
+                </span>
+                <span className="hero-pill-badge-sub">report clarity</span>
               </div>
-              <div className="hero-trust-item">
-                <CheckCircle2 size={16} />
-                <span>Cited AI Sources</span>
+
+              {/* Central Family Image */}
+              <img
+                src="/hero-family.jpg"
+                alt="Happy Indian family protected by Health Copilot"
+                className="hero-family-img"
+              />
+
+              {/* Badge 3: Mid Left */}
+              <div className="hero-pill-badge hero-pill-mid-left">
+                <span className="hero-pill-badge-title" style={{ color: '#0284c7' }}>
+                  11,500+
+                </span>
+                <span className="hero-pill-badge-sub">verified labs & clinics</span>
+              </div>
+
+              {/* Badge 4: Bottom Right */}
+              <div className="hero-pill-badge hero-pill-top-left" style={{ bottom: '-10px', top: 'auto', right: '-12px', left: 'auto' }}>
+                <span className="hero-pill-badge-title" style={{ color: '#7c3aed' }}>
+                  ABHA Ready
+                </span>
+                <span className="hero-pill-badge-sub">Instant Vault Sync</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Visual Product Preview Element */}
-          <div className="hero-visual-wrapper hero-anim-visual">
-            {/* Top Floating Badge */}
-            <div className="hero-float-badge-top" aria-hidden="true">
-              <Pill size={16} />
-              <span>Active Prescription Monitored</span>
+          {/* Right Column: Member Selection & Personalization Card */}
+          <div className="hero-form-card">
+            <h3>Who would you like to safeguard?</h3>
+
+            {/* Member Selector Icons */}
+            <div className="member-selector-grid">
+              {members.map((m) => {
+                const IconComponent = m.icon;
+                const isSelected = selectedMember === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMember(m.id)}
+                    className={`member-btn ${isSelected ? 'active' : ''}`}
+                  >
+                    <div className="member-icon-bubble">
+                      <IconComponent size={20} />
+                      {isSelected && (
+                        <div className="member-check-badge">
+                          <Check size={11} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                    <span className="member-label">{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Main Interactive Clinical Card */}
-            <div className="hero-visual-card">
-              <div className="hero-preview-header">
-                <div className="hero-preview-source">
-                  <div className="hero-preview-icon">
-                    <FileText size={18} />
-                  </div>
-                  <div>
-                    <div className="hero-preview-docname">Metabolic & Lipid Panel</div>
-                    <div className="hero-preview-meta">Quest Diagnostics • Extracted & Indexed</div>
-                  </div>
-                </div>
-                <div className="hero-preview-status">
-                  <Activity size={12} />
-                  <span>RAG Ready</span>
-                </div>
-              </div>
-
-              {/* Biomarker Key Metrics */}
-              <div className="hero-biomarkers">
-                <div className="hero-biomarker-chip">
-                  <div className="hero-biomarker-label">Hemoglobin</div>
-                  <div className="hero-biomarker-val">14.2 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>g/dL</span></div>
-                  <div className="hero-biomarker-tag">Optimal</div>
-                </div>
-                <div className="hero-biomarker-chip">
-                  <div className="hero-biomarker-label">Total Chol</div>
-                  <div className="hero-biomarker-val">188 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>mg/dL</span></div>
-                  <div className="hero-biomarker-tag">Normal</div>
-                </div>
-                <div className="hero-biomarker-chip">
-                  <div className="hero-biomarker-label">Vitamin D</div>
-                  <div className="hero-biomarker-val">34.8 <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#64748b' }}>ng/mL</span></div>
-                  <div className="hero-biomarker-tag">Healthy</div>
-                </div>
-              </div>
-
-              {/* AI Copilot Query & Cited Answer */}
-              <div className="hero-chat-snippet">
-                <div className="hero-chat-user">
-                  <MessageSquare size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-                  <span>"Are my cholesterol and vitamin levels in healthy ranges?"</span>
-                </div>
-                <div className="hero-chat-ai">
-                  <div className="hero-chat-ai-header">
-                    <Bot size={14} />
-                    <span>Health Copilot Assistant</span>
-                  </div>
-                  <p className="hero-chat-ai-body">
-                    Yes. Your total cholesterol is 188 mg/dL (under the 200 mg/dL target) and Vitamin D is 34.8 ng/mL, showing consistent improvement from your previous report.
-                  </p>
-                  <div className="hero-chat-citation">
-                    <FileCheck2 size={12} />
-                    <span>Cited from Lab Report #QD-2026</span>
-                  </div>
-                </div>
-              </div>
+            {/* Age Input */}
+            <div className="hero-card-section-title">Please enter the age</div>
+            <div className="hero-age-row">
+              <span className="hero-age-label">
+                {selectedMember === 'Child' ? 'Child age' : 'Eldest member (self, spouse)'}
+              </span>
+              <input
+                type="number"
+                min="1"
+                max="105"
+                placeholder="32"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="hero-age-input"
+              />
             </div>
 
-            {/* Bottom Floating Badge */}
-            <div className="hero-float-badge-bottom" aria-hidden="true">
-              <ShieldCheck size={16} />
-              <span>Strict Patient Vault Security</span>
+            {/* Phone & Pincode Split Row */}
+            <div className="hero-input-split">
+              <div className="hero-phone-group">
+                <span className="hero-phone-prefix">+91</span>
+                <input
+                  type="tel"
+                  placeholder="Your phone number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="hero-phone-input"
+                  maxLength={10}
+                />
+              </div>
+
+              <input
+                type="text"
+                placeholder="Your pincode"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                className="hero-pincode-input"
+                maxLength={6}
+              />
+            </div>
+
+            {/* Green CTA Button */}
+            <button
+              type="button"
+              onClick={handleGetStarted}
+              className="hero-cta-btn"
+            >
+              Get Started Free <ArrowRight size={18} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: '0.85rem' }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                🔒 Zero third-party data sharing • Instant OCR & RAG analysis
+              </span>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Why Health Copilot Stats Row */}
+      <section className="why-acko-section">
+        <h2 className="why-acko-title">Why Health Copilot?</h2>
+
+        <div className="why-acko-grid">
+          <div className="why-acko-card">
+            <div className="why-acko-icon">
+              <Users size={26} />
+            </div>
+            <div>
+              <div className="why-acko-stat">7.5Cr+</div>
+              <p className="why-acko-desc">Clinical records interpreted and structured across patients</p>
+            </div>
+          </div>
+
+          <div className="why-acko-card">
+            <div className="why-acko-icon" style={{ backgroundColor: '#ecfdf5', color: '#059669' }}>
+              <ShieldCheck size={26} />
+            </div>
+            <div>
+              <div className="why-acko-stat">100%</div>
+              <p className="why-acko-desc">Vault isolation with private user-level data segregation</p>
+            </div>
+          </div>
+
+          <div className="why-acko-card">
+            <div className="why-acko-icon" style={{ backgroundColor: '#fef3c7', color: '#d97706' }}>
+              <Activity size={26} />
+            </div>
+            <div>
+              <div className="why-acko-stat">98%</div>
+              <p className="why-acko-desc">Doctor preparation satisfaction with bilingual summaries</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Floating Chat / Call Widget matching Acko */}
+      <Link to="/assistant" className="hero-floating-help" title="Ask AI Health Assistant">
+        <span className="hero-floating-help-dot" />
+        <span>Ask Copilot AI</span>
+        <Bot size={16} />
+      </Link>
 
 
       {/* Core Features Grid */}
