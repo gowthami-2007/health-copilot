@@ -7,11 +7,18 @@ import { Bot, ShieldCheck, Sparkles, MessageSquare } from 'lucide-react';
 const ChatWindow = ({
   messages = [],
   isLoading = false,
+  isHistoryLoading = false,
   onSendMessage,
   conversationTitle = 'Health Consultation',
   resetKey = 0,
 }) => {
   const messagesEndRef = useRef(null);
+
+  // Only show the "Thinking..." indicator if loading AND the last message in chat was from the user
+  const isWaitingForAssistant =
+    Boolean(isLoading) &&
+    messages.length > 0 &&
+    messages[messages.length - 1]?.role === 'user';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,7 +100,24 @@ const ChatWindow = ({
           minWidth: 0,
         }}
       >
-        {messages.length === 0 ? (
+        {isHistoryLoading ? (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem',
+              color: 'var(--text-muted)',
+              fontSize: '0.9rem',
+              padding: '3rem 1rem',
+            }}
+          >
+            <span className="spinner" style={{ width: '28px', height: '28px', borderWidth: '3px' }} />
+            <span>Loading consultation history...</span>
+          </div>
+        ) : messages.length === 0 ? (
           <div
             style={{
               flex: 1,
@@ -136,7 +160,7 @@ const ChatWindow = ({
               <ChatMessage key={msg._id || index} message={msg} />
             ))}
 
-            {isLoading && (
+            {isWaitingForAssistant && (
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
                 <div
                   style={{

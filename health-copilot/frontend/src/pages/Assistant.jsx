@@ -27,6 +27,7 @@ const Assistant = () => {
   const chatAbortControllerRef = useRef(null);
   const messagesAbortControllerRef = useRef(null);
   const activeRequestIdRef = useRef(0);
+  const skipNextMessagesFetchRef = useRef(false);
 
   // Keep ref synchronized with state
   useEffect(() => {
@@ -67,6 +68,11 @@ const Assistant = () => {
     if (!activeConversationId) {
       setMessages([]);
       setLoadingMessages(false);
+      return;
+    }
+
+    if (skipNextMessagesFetchRef.current) {
+      skipNextMessagesFetchRef.current = false;
       return;
     }
 
@@ -201,6 +207,7 @@ const Assistant = () => {
 
       // If a new conversation was created on the backend
       if (!targetConversationId && returnedConvId) {
+        skipNextMessagesFetchRef.current = true;
         setActiveConversationId(returnedConvId);
         // Prepend new conversation to sidebar immediately
         setConversations((prev) => [
@@ -539,7 +546,8 @@ const Assistant = () => {
         <div style={{ minWidth: 0, width: '100%' }}>
           <ChatWindow
             messages={messages}
-            isLoading={sendingQuery || loadingMessages}
+            isLoading={sendingQuery}
+            isHistoryLoading={loadingMessages && messages.length === 0}
             onSendMessage={handleSendMessage}
             conversationTitle={activeConv?.title || 'New Health Consultation'}
             resetKey={resetKey}
