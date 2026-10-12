@@ -1369,4 +1369,127 @@ html, body {
     transform: none !important;
     animation: none !important;
   }
+}
+
+/* ==========================================================================
+   INTERACTIVE FAQ ACCORDION SECTION
+   ========================================================================== */
+
+.faq-section {
+  padding: 5rem 2rem 5.5rem 2rem;
+  background-color: #fafcff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.faq-container {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.faq-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.faq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.85rem;
+}
+
+.faq-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.75rem;
+}
+
+.faq-subtitle {
+  color: #64748b;
+  font-size: 1.05rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.faq-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.faq-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.faq-item.open {
+  border-color: #bae6fd;
+  box-shadow: 0 10px 24px -6px rgba(2, 132, 199, 0.12);
+}
+
+.faq-question-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.65rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.faq-item.open .faq-question-btn {
+  color: var(--primary);
+}
+
+.faq-icon-chevron {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.faq-item.open .faq-icon-chevron {
+  background-color: #e0f2fe;
+  color: var(--primary);
+  transform: rotate(180deg);
+}
+
+.faq-answer-panel {
+  padding: 0 1.65rem 1.5rem 1.65rem;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.7;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1rem;
+  animation: heroFadeUp 0.3s ease both;
 }

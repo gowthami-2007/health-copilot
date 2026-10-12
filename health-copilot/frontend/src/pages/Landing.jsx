@@ -25,12 +25,14 @@ import {
   Building2,
   Receipt,
   Percent,
+  ChevronDown,
 } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState('Self');
   const [age, setAge] = useState('');
+  const [openFaq, setOpenFaq] = useState(0); // First item open by default
   const featuresRef = useRef(null);
 
   const members = [
@@ -39,6 +41,33 @@ const Landing = () => {
     { id: 'Child', label: 'Child', icon: Baby },
     { id: 'Parent', label: 'Parent', icon: Users },
     { id: 'ParentInLaw', label: 'Parent In-Law', icon: Users },
+  ];
+
+  const faqs = [
+    {
+      q: 'How does Health Copilot understand my medical and lab reports?',
+      a: 'Health Copilot uses an integrated OCR engine to extract key measurements, diagnostic panels, and doctor notes from uploaded PDFs or photos. Our Retrieval-Augmented Generation (RAG) system then references these exact values to generate plain-language explanations with cited source documents.',
+    },
+    {
+      q: 'Is my personal health data kept private and secure?',
+      a: 'Yes, completely. Your medical documents, extracted biomarker values, and consultation history are strictly isolated to your individual authenticated user account. We maintain zero third-party sharing and apply zero data tracking.',
+    },
+    {
+      q: 'Can Health Copilot replace visits to my doctor?',
+      a: 'No. Health Copilot is an informational AI assistant designed to help you organize documents, understand medical terms, and formulate proactive questions. It does not provide medical diagnoses, emergency care, or prescription changes. Always consult a licensed healthcare professional for clinical decisions.',
+    },
+    {
+      q: 'Does it support regional Indian languages like Telugu?',
+      a: 'Yes! You can toggle between English and Telugu (తెలుగు) in your Profile Settings. The AI will translate document summaries and explanations while strictly preserving exact medical values, dosages, and drug names in their original clinical format.',
+    },
+    {
+      q: 'What is the simulated ABDM / ABHA Sandbox readiness?',
+      a: 'It demonstrates compatibility with India’s Ayushman Bharat Digital Mission (ABDM). In sandbox mode, you can link a mock 14-digit ABHA identity, preview simulated federated hospital records, and import FHIR R4 standardized clinical bundles into your timeline.',
+    },
+    {
+      q: 'How do I add prescriptions and set reminder schedules?',
+      a: 'Head to the Medications tab to record prescription names, dosages, schedules (e.g. once daily with meals), and prescribing doctors. Your daily regimens are organized alongside upcoming clinical appointments in your unified Health Timeline.',
+    },
   ];
 
   // Scroll / load IntersectionObserver to trigger fly-in animation
@@ -361,6 +390,48 @@ const Landing = () => {
       </section>
 
 
+
+      {/* Frequently Asked Questions Section */}
+      <section id="faq" className="faq-section">
+        <div className="faq-container">
+          <div className="faq-header">
+            <div className="faq-badge">
+              <HelpCircle size={14} />
+              <span>Got Questions?</span>
+            </div>
+            <h2 className="faq-title">Frequently Asked Questions</h2>
+            <p className="faq-subtitle">
+              Learn how Health Copilot protects your personal vault, processes laboratory reports, and powers conversational healthcare intelligence.
+            </p>
+          </div>
+
+          <div className="faq-list">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div key={index} className={`faq-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="faq-question-btn"
+                    aria-expanded={isOpen}
+                  >
+                    <span>{faq.q}</span>
+                    <div className="faq-icon-chevron">
+                      <ChevronDown size={16} />
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div className="faq-answer-panel">
+                      <p style={{ margin: 0 }}>{faq.a}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer style={{ padding: '2.5rem 2rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 'auto' }}>
