@@ -11,6 +11,8 @@ const Document = require('../../backend/src/models/Document');
 const Timeline = require('../../backend/src/models/Timeline');
 const authService = require('../../backend/src/services/authService');
 
+const { generateToken } = require('../../backend/src/utils/jwt');
+
 describe('CRITICAL PRIVACY AUDIT: User-Specific File Privacy & Data Isolation', () => {
   let server;
   let baseUrl;
@@ -41,11 +43,13 @@ describe('CRITICAL PRIVACY AUDIT: User-Specific File Privacy & Data Isolation', 
 
     const regA = await authService.register({ name: 'User Alpha', email: emailA, password });
     userA = regA.user;
-    tokenA = regA.token;
+    await User.findByIdAndUpdate(userA._id, { isEmailVerified: true });
+    tokenA = generateToken(userA._id, { email: emailA });
 
     const regB = await authService.register({ name: 'User Beta', email: emailB, password });
     userB = regB.user;
-    tokenB = regB.token;
+    await User.findByIdAndUpdate(userB._id, { isEmailVerified: true });
+    tokenB = generateToken(userB._id, { email: emailB });
 
     // 4. Ensure upload directory exists
     if (!fs.existsSync(config.uploadDir)) {

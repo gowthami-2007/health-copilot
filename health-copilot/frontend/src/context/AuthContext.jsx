@@ -63,10 +63,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password, confirmPassword) => {
+  const googleLogin = async (idToken) => {
     setError(null);
     try {
-      const res = await authService.register({ name, email, password, confirmPassword });
+      const res = await authService.googleAuth(idToken);
       const { user: userData, token: userToken } = res.data;
       setUser(userData);
       setToken(userToken);
@@ -74,9 +74,58 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('health_copilot_user', JSON.stringify(userData));
       return userData;
     } catch (err) {
+      setError(err.message || 'Google authentication failed');
+      throw err;
+    }
+  };
+
+  const register = async (name, email, password, confirmPassword) => {
+    setError(null);
+    try {
+      const res = await authService.register({ name, email, password, confirmPassword });
+      // If server returned a session token immediately (e.g. dev/auto-verified)
+      if (res.data?.token) {
+        const { user: userData, token: userToken } = res.data;
+        setUser(userData);
+        setToken(userToken);
+        localStorage.setItem('health_copilot_token', userToken);
+        localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      }
+      return res.data;
+    } catch (err) {
       setError(err.message || 'Registration failed');
       throw err;
     }
+  };
+
+  const verifyEmail = async ({ token: verifyToken, code, email }) => {
+    setError(null);
+    try {
+      const res = await authService.verifyEmail({ token: verifyToken, code, email });
+      if (res.data?.token) {
+        const { user: userData, token: userToken } = res.data;
+        setUser(userData);
+        setToken(userToken);
+        localStorage.setItem('health_copilot_token', userToken);
+        localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      }
+      return res.data;
+    } catch (err) {
+      setError(err.message || 'Verification failed');
+      throw err;
+    }
+  };
+
+  const resendVerification = async (email) => {
+    return await authService.resendVerification(email);
+  };
+
+  const forgotPassword = async (email) => {
+    return await authService.forgotPassword(email);
+  };
+
+  const resetPassword = async ({ token: resetToken, password, confirmPassword }) => {
+    return await authService.resetPassword({ token: resetToken, password, confirmPassword });
   };
 
   const logout = async () => {
@@ -97,7 +146,12 @@ export const AuthProvider = ({ children }) => {
     error,
     isAuthenticated: !!token && !!user,
     login,
+    googleLogin,
     register,
+    verifyEmail,
+    resendVerification,
+    forgotPassword,
+    resetPassword,
     logout,
     checkAuth,
     setUser,

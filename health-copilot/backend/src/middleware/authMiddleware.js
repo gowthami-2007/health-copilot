@@ -42,12 +42,29 @@ const protect = async (req, res, next) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      isEmailVerified: Boolean(user.isEmailVerified),
     };
 
     next();
   } catch (error) {
     next(error);
   }
+};
+
+/**
+ * Middleware requiring user to have completed email verification.
+ */
+const requireVerifiedEmail = (req, res, next) => {
+  if (!req.user || !req.user.isEmailVerified) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: Please verify your email address to access private health records.',
+      error: 'EMAIL_NOT_VERIFIED',
+      requiresVerification: true,
+      email: req.user?.email,
+    });
+  }
+  next();
 };
 
 /**
@@ -88,5 +105,6 @@ const optionalAuth = async (req, res, next) => {
 
 module.exports = {
   protect,
+  requireVerifiedEmail,
   optionalAuth,
 };

@@ -23,9 +23,52 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Please provide a password'],
+      required: [
+        function () {
+          return !this.googleId;
+        },
+        'Please provide a password',
+      ],
       minlength: [8, 'Password must be at least 8 characters long'],
       select: false, // Never return password in queries by default
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+      index: true,
+    },
+    emailVerificationCode: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    passwordResetToken: {
+      type: String,
+      select: false,
+      index: true,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
     },
     avatar: {
       type: String,
@@ -66,6 +109,11 @@ const userSchema = new mongoose.Schema(
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;
+  delete user.emailVerificationToken;
+  delete user.emailVerificationCode;
+  delete user.emailVerificationExpires;
+  delete user.passwordResetToken;
+  delete user.passwordResetExpires;
   delete user.__v;
   return user;
 };

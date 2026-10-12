@@ -22,7 +22,17 @@ const config = {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
-  }
+  },
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  email: {
+    providerApiKey: process.env.EMAIL_PROVIDER_API_KEY || process.env.RESEND_API_KEY || '',
+    from: process.env.EMAIL_FROM || 'HealthCopilot <notifications@healthcopilot.app>',
+    smtpHost: process.env.SMTP_HOST || '',
+    smtpPort: parseInt(process.env.SMTP_PORT, 10) || 587,
+    smtpUser: process.env.SMTP_USER || '',
+    smtpPass: process.env.SMTP_PASS || '',
+  },
 };
 
 module.exports = config;
