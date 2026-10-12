@@ -417,11 +417,13 @@ const Landing = () => {
                       <ChevronDown size={16} />
                     </div>
                   </button>
-                  {isOpen && (
-                    <div className="faq-answer-panel">
-                      <p style={{ margin: 0 }}>{faq.a}</p>
+                  <div className="faq-collapse-wrapper">
+                    <div className="faq-collapse-inner">
+                      <div className="faq-answer-panel">
+                        <p style={{ margin: 0 }}>{faq.a}</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
