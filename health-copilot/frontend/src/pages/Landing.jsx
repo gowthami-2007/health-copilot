@@ -31,8 +31,6 @@ const Landing = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState('Self');
   const [age, setAge] = useState('');
-  const [phone, setPhone] = useState('');
-  const [pincode, setPincode] = useState('');
 
   const members = [
     { id: 'Self', label: 'Self', icon: User },
@@ -203,30 +201,6 @@ const Landing = () => {
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 className="hero-age-input"
-              />
-            </div>
-
-            {/* Phone & Pincode Split Row */}
-            <div className="hero-input-split">
-              <div className="hero-phone-group">
-                <span className="hero-phone-prefix">+91</span>
-                <input
-                  type="tel"
-                  placeholder="Your phone number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="hero-phone-input"
-                  maxLength={10}
-                />
-              </div>
-
-              <input
-                type="text"
-                placeholder="Your pincode"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                className="hero-pincode-input"
-                maxLength={6}
               />
             </div>
 
