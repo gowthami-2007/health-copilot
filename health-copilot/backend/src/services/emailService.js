@@ -1,18 +1,75 @@
+const https = require('https');
 const nodemailer = require('nodemailer');
 const config = require('../config/env');
 
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.initialized = false;
+  }
+
+  /**
+   * Dispatches email via Resend's native HTTPS REST API
+   */
+  async sendViaResendHttp({ to, subject, html, text }) {
+    const apiKey = config.email.providerApiKey;
+    if (!apiKey) return null;
+
+    // Use onboarding@resend.dev unless user has verified their custom domain
+    let fromAddress = config.email.from;
+    if (!fromAddress || fromAddress.includes('healthcopilot.app')) {
+      fromAddress = 'HealthCopilot <onboarding@resend.dev>';
+    }
+
+    const payload = JSON.stringify({
+      from: fromAddress,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      text,
+    });
+
+    return new Promise((resolve) => {
+      const req = https.request(
+        {
+          hostname: 'api.resend.com',
+          path: '/emails',
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+          },
+          timeout: 10000,
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (chunk) => (body += chunk));
+          res.on('end', () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve({ success: true, provider: 'resend_https', body });
+            } else {
+              console.warn('[EmailService] Resend API response error:', res.statusCode, body);
+              resolve({ success: false, error: body });
+            }
+          });
+        }
+      );
+
+      req.on('error', (err) => {
+        console.error('[EmailService] Resend HTTPS request error:', err.message);
+        resolve({ success: false, error: err.message });
+      });
+
+      req.write(payload);
+      req.end();
+    });
   }
 
   getTransporter() {
     if (this.transporter) return this.transporter;
-
     const { email } = config;
 
-    // 1. SMTP Transporter if host is provided
+    // SMTP Transporter if custom host is provided
     if (email.smtpHost) {
       this.transporter = nodemailer.createTransport({
         host: email.smtpHost,
@@ -25,35 +82,27 @@ class EmailService {
       });
       return this.transporter;
     }
-
-    // 2. Resend via SMTP or HTTPS if RESEND_API_KEY is provided
-    if (email.providerApiKey && email.providerApiKey.startsWith('re_')) {
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.resend.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: 'resend',
-          pass: email.providerApiKey,
-        },
-      });
-      return this.transporter;
-    }
-
     return null;
   }
 
   /**
-   * Sends an email via configured provider or logs to console in development.
+   * Main email dispatch handler
    */
   async sendMail({ to, subject, html, text }) {
-    const transporter = this.getTransporter();
-    const fromAddress = config.email.from || 'HealthCopilot <notifications@healthcopilot.app>';
+    // 1. If Resend API Key is configured, use fast native HTTPS API
+    if (config.email.providerApiKey && config.email.providerApiKey.startsWith('re_')) {
+      const httpResult = await this.sendViaResendHttp({ to, subject, html, text });
+      if (httpResult?.success) {
+        return httpResult;
+      }
+    }
 
+    // 2. Custom SMTP fallback if configured
+    const transporter = this.getTransporter();
     if (transporter && config.nodeEnv !== 'test') {
       try {
         const info = await transporter.sendMail({
-          from: fromAddress,
+          from: config.email.from || 'HealthCopilot <onboarding@resend.dev>',
           to,
           subject,
           text,
@@ -61,16 +110,11 @@ class EmailService {
         });
         return { success: true, messageId: info.messageId, provider: 'smtp' };
       } catch (err) {
-        console.error('[EmailService] Provider delivery failed:', err.message);
-        // Fallback to console output in dev so user is not blocked
-        if (config.nodeEnv === 'development') {
-          console.log(`[EmailService DEV FALLBACK] To: ${to} | Subject: ${subject}`);
-        }
-        return { success: false, error: err.message };
+        console.error('[EmailService] SMTP delivery failed:', err.message);
       }
     }
 
-    // Local development/test fallback when external provider credentials are not yet configured
+    // 3. Fallback console logging in dev/test
     if (config.nodeEnv !== 'test') {
       console.log(`\n================== [HEALTHCOPILOT EMAIL DISPATCH] ==================`);
       console.log(`To: ${to}`);
