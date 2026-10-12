@@ -395,10 +395,6 @@ const Landing = () => {
       <section id="faq" className="faq-section">
         <div className="faq-container">
           <div className="faq-header">
-            <div className="faq-badge">
-              <HelpCircle size={14} />
-              <span>Got Questions?</span>
-            </div>
             <h2 className="faq-title">Frequently Asked Questions</h2>
             <p className="faq-subtitle">
               Learn how Health Copilot protects your personal vault, processes laboratory reports, and powers conversational healthcare intelligence.
