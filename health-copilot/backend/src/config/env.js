@@ -11,7 +11,7 @@ const config = {
   mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/health_copilot',
   jwtSecret: process.env.JWT_SECRET || 'health_copilot_fallback_jwt_secret_token_12345',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrl: process.env.CLIENT_URL || 'https://health-copilot-pearl.vercel.app',
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 10 * 1024 * 1024, // 10MB default
   uploadDir: path.resolve(__dirname, '../../uploads'),
   aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:5001',
