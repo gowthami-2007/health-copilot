@@ -192,6 +192,7 @@ class AIChatService {
         // avoid duplicating attachment if already in context
         if (!documentContext.some((d) => d.fileName === doc.fileName)) {
           documentContext.push({
+            documentId: doc._id,
             fileName: doc.fileName,
             documentType: doc.documentType,
             text: (doc.extractedText || '').substring(0, 1500),
@@ -242,7 +243,7 @@ class AIChatService {
         conversationId: conversation._id,
         role: 'assistant',
         content: generatedAnswer,
-        sources: documentContext.map((d) => ({ fileName: d.fileName })),
+        sources: documentContext.map((d) => ({ documentId: d.documentId || null, fileName: d.fileName })),
       });
 
       // 8. Dynamic Title Generation:
@@ -274,7 +275,7 @@ class AIChatService {
       message: generatedAnswer,
       userMessage: userMsg || { role: 'user', content: effectiveQuery, attachments: processedAttachments },
       assistantMessage: assistantMsg || { role: 'assistant', content: generatedAnswer },
-      sources: documentContext.map((d) => ({ fileName: d.fileName })),
+      sources: documentContext.map((d) => ({ documentId: d.documentId || null, fileName: d.fileName })),
     };
   }
 

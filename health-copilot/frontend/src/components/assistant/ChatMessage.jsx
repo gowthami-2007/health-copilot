@@ -131,32 +131,56 @@ const ChatMessage = ({ message }) => {
               Sources Retrieved From Your Vault
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {message.sources.map((src, i) => (
-                <Link
-                  key={i}
-                  to={`/documents/${src.documentId}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    fontSize: '0.75rem',
-                    padding: '0.25rem 0.6rem',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--primary)',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                    maxWidth: '100%',
-                    overflow: 'hidden',
-                  }}
-                  title={src.excerpt || src.fileName}
-                >
-                  <FileText size={12} style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{src.fileName}</span>
-                  <ExternalLink size={10} style={{ flexShrink: 0 }} />
-                </Link>
-              ))}
+              {message.sources.map((src, i) =>
+                src.documentId ? (
+                  <Link
+                    key={i}
+                    to={`/documents/${src.documentId}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--primary)',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                    }}
+                    title={src.excerpt || src.fileName}
+                  >
+                    <FileText size={12} style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{src.fileName}</span>
+                    <ExternalLink size={10} style={{ flexShrink: 0 }} />
+                  </Link>
+                ) : (
+                  <span
+                    key={i}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-main)',
+                      fontWeight: 600,
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                    }}
+                    title={src.excerpt || src.fileName}
+                  >
+                    <FileText size={12} style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{src.fileName}</span>
+                  </span>
+                )
+              )}
             </div>
           </div>
         )}
