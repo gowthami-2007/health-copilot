@@ -46,6 +46,7 @@ async function seedDemoData() {
     password: hashedPassword,
     dateOfBirth: new Date('1988-06-14'),
     gender: 'other',
+    isEmailVerified: true,
   });
   console.log(`✅ Demo User Created: ${demoUser.email} (Password: ${DEMO_PASSWORD})`);
 
@@ -256,6 +257,7 @@ Follow up in 3 months for blood pressure review and electrolyte panel.
     reason: 'Quarterly blood pressure & lipid consultation review',
     notes: 'Bring home blood pressure readings log',
     status: 'UPCOMING',
+    type: 'APPOINTMENT',
   });
 
   const apt2 = await Appointment.create({
@@ -268,8 +270,24 @@ Follow up in 3 months for blood pressure review and electrolyte panel.
     reason: 'Annual wellness exam & preventative screening',
     notes: 'Routine yearly checkup',
     status: 'UPCOMING',
+    type: 'APPOINTMENT',
   });
-  console.log('✅ 2 Upcoming Appointments Seeded');
+
+  const con1 = await Appointment.create({
+    userId: demoUser._id,
+    doctorName: 'Dr. Sarah Jenkins',
+    specialty: 'Cardiology',
+    date: new Date('2026-07-02T10:30:00Z'),
+    time: '10:30 AM',
+    location: 'Heart & Vascular Pavilion, Suite 300',
+    reason: 'Mild essential hypertension clinical assessment',
+    notes: 'Blood Pressure 128/82 mmHg. Initiated Lisinopril 10mg once daily.',
+    status: 'COMPLETED',
+    type: 'CONSULTATION',
+    sourceDocumentId: doc3._id,
+    autoExtracted: true,
+  });
+  console.log('✅ 2 Appointments and 1 Doctor Consultation Seeded');
 
   // 6. Seed Timeline Events
   await Timeline.create([
