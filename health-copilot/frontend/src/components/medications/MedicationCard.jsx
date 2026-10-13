@@ -3,14 +3,14 @@ import { Pill, Edit2, Trash2, Clock, Calendar, CheckCircle, PauseCircle } from '
 import { useLanguage } from '../../hooks/useLanguage';
 
 const MedicationCard = ({ medication, onEdit, onDelete }) => {
-  const { t } = useLanguage();
+  const { t, tClin } = useLanguage();
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'ACTIVE':
         return <span className="badge badge-success"><CheckCircle size={12} /> {t('common.active', 'Active')}</span>;
       case 'PAUSED':
-        return <span className="badge badge-warning"><PauseCircle size={12} /> Paused</span>;
+        return <span className="badge badge-warning"><PauseCircle size={12} /> {t('common.paused', 'Paused')}</span>;
       default:
         return <span className="badge badge-neutral">{t('common.completed', 'Completed')}</span>;
     }
@@ -90,12 +90,12 @@ const MedicationCard = ({ medication, onEdit, onDelete }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
             <Clock size={14} color="var(--primary)" />
-            <span><strong>{t('medications.frequency', 'Schedule')}:</strong> {medication.frequency}</span>
+            <span><strong>{t('medications.frequency', 'Schedule')}:</strong> {tClin(medication.frequency)}</span>
           </div>
 
           {medication.instructions && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', marginTop: '0.25rem', lineHeight: 1.4 }}>
-              <strong>{t('medications.instructions', 'Instructions')}:</strong> {medication.instructions}
+              <strong>{t('medications.instructions', 'Instructions')}:</strong> {tClin(medication.instructions)}
             </p>
           )}
 
@@ -119,7 +119,7 @@ const MedicationCard = ({ medication, onEdit, onDelete }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <Calendar size={12} />
-          <span>Started {new Date(medication.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <span>{t('medications.started', 'Started')} {new Date(medication.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
       </div>
     </div>

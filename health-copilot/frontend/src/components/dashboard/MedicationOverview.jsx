@@ -4,7 +4,7 @@ import { Pill, ArrowRight, Sun, Moon, Clock } from 'lucide-react';
 import useLanguage from '../../hooks/useLanguage';
 
 const MedicationOverview = ({ medications = [] }) => {
-  const { t, isTelugu } = useLanguage();
+  const { t, tClin, isTelugu } = useLanguage();
 
   const getFrequencyIcon = (freq = '') => {
     const lower = freq.toLowerCase();
@@ -90,7 +90,7 @@ const MedicationOverview = ({ medications = [] }) => {
                     {med.name}
                   </h4>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                    Dosage: {med.dosage}
+                    {t('medications.dosage', 'Dosage')}: {med.dosage}
                   </span>
                 </div>
               </div>
@@ -108,11 +108,11 @@ const MedicationOverview = ({ medications = [] }) => {
                   borderRadius: 'var(--radius-sm)'
                 }}>
                   {getFrequencyIcon(med.frequency)}
-                  <span>{med.frequency}</span>
+                  <span>{tClin(med.frequency)}</span>
                 </div>
                 {med.instructions && (
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', margin: '0.2rem 0 0 0' }}>
-                    {med.instructions}
+                    {tClin(med.instructions)}
                   </p>
                 )}
               </div>

@@ -55,6 +55,7 @@ export const translations = {
       completed: 'Completed',
       cancelled: 'Cancelled',
       active: 'Active',
+      paused: 'Paused',
       discontinued: 'Discontinued',
     },
     dashboard: {
@@ -168,6 +169,8 @@ export const translations = {
       addMedication: 'Add Medication',
       activeTab: 'Active Medications',
       discontinuedTab: 'Discontinued / Past',
+      pausedTab: 'Paused',
+      started: 'Started',
       medName: 'Medication Name',
       dosage: 'Dosage',
       frequency: 'Frequency',
@@ -308,6 +311,7 @@ export const translations = {
       completed: 'పూర్తయినవి',
       cancelled: 'రద్దయినవి',
       active: 'ప్రస్తుతం వాడుతున్నవి',
+      paused: 'పాజ్ చేసినవి',
       discontinued: 'నిలిపివేసినవి',
     },
     dashboard: {
@@ -421,6 +425,8 @@ export const translations = {
       addMedication: 'కొత్త మందును జోడించండి',
       activeTab: 'ప్రస్తుతం వాడుతున్న మందులు',
       discontinuedTab: 'నిలిపివేసిన / గత మందులు',
+      pausedTab: 'పాజ్ చేసినవి',
+      started: 'ప్రారంభం:',
       medName: 'మందు పేరు',
       dosage: 'మోతాదు',
       frequency: 'ఎన్నిసార్లు (ఫ్రీక్వెన్సీ)',
@@ -511,6 +517,69 @@ export const translations = {
       text: 'హెల్త్ కోపైలట్ అనేది మీ రికార్డులను నిర్వహించడానికి రూపొందించబడిన AI సమాచార సాధనం. ఇది వైద్య నిర్ధారణలు, చికిత్స ప్రణాళికలు లేదా అత్యవసర సేవలను అందించదు. క్లినికల్ నిర్ణయాల కోసం లైసెన్స్ పొందిన వైద్యుడిని సంప్రదించండి.',
     },
   },
+};
+
+/**
+ * Standard clinical frequency and instruction phrases mapping to authentic Telugu.
+ */
+export const clinicalPhrases = {
+  // Frequencies
+  'Once daily with meals': 'భోజనంతో పాటు రోజుకు ఒకసారి',
+  'Once daily in morning': 'ఉదయం రోజుకు ఒకసారి',
+  'Once daily at bedtime': 'పడుకునే ముందు రోజుకు ఒకసారి',
+  'Once daily at night': 'రాత్రి వేళ రోజుకు ఒకసారి',
+  'Once daily (Morning)': 'రోజుకు ఒకసారి (ఉదయం)',
+  'Once daily (Night / Bedtime)': 'రోజుకు ఒకసారి (రాత్రి / పడుకునే ముందు)',
+  'Once daily': 'రోజుకు ఒకసారి',
+  'Twice daily (Morning & Night)': 'రోజుకు రెండుసార్లు (ఉదయం & రాత్రి)',
+  'Twice daily': 'రోజుకు రెండుసార్లు',
+  'Three times daily with meals': 'భోజనంతో పాటు రోజుకు మూడుసార్లు',
+  'Three times daily': 'రోజుకు మూడుసార్లు',
+  'Every 4 to 6 hours as needed': 'అవసరమైన విధంగా ప్రతి 4 నుండి 6 గంటలకు',
+  'As needed (PRN)': 'అవసరమైన విధంగా',
+  'As needed': 'అవసరమైనప్పుడు',
+  'Weekly': 'వారానికి ఒకసారి',
+  'Daily': 'రోజువారీ',
+
+  // Instructions
+  'Take with morning meal': 'ఉదయపు అల్పాహారంతో/భోజనంతో తీసుకోండి',
+  'Take with a full glass of water upon waking': 'నిద్రలేచిన వెంటనే పూర్తి గ్లాసు నీటితో తీసుకోండి',
+  'Take 1 tablet every night before sleep': 'ప్రతి రాత్రి పడుకునే ముందు 1 మాత్ర తీసుకోండి',
+  'Take with food': 'ఆహారంతో పాటు తీసుకోండి',
+  'Take with food, drink full glass of water': 'ఆహారంతో పాటు తీసుకోండి, పూర్తి గ్లాసు నీరు త్రాగండి',
+  'Take with water': 'నీటితో తీసుకోండి',
+  'Take on an empty stomach': 'ఖాళీ కడుపుతో తీసుకోండి',
+  'Take before meals': 'భోజనానికి ముందు తీసుకోండి',
+  'Take after meals': 'భోజనం తర్వాత తీసుకోండి',
+  'Do not crush or chew': 'నమలడం లేదా పొడి చేయడం చేయవద్దు',
+  'Take before sleep': 'పడుకునే ముందు తీసుకోండి',
+  'Take with evening meal': 'సాయంత్రం భోజనంతో పాటు తీసుకోండి',
+  'Take 1 tablet daily': 'రోజుకు 1 మాత్ర తీసుకోండి',
+  'Take 2 tablets daily': 'రోజుకు 2 మాత్రలు తీసుకోండి',
+};
+
+export const translateClinicalPhrase = (text, lang) => {
+  if (!text || typeof text !== 'string') return text;
+  if (lang !== 'te') return text;
+  const trimmed = text.trim();
+  if (clinicalPhrases[trimmed]) return clinicalPhrases[trimmed];
+
+  // Case-insensitive match
+  const lower = trimmed.toLowerCase();
+  for (const [key, val] of Object.entries(clinicalPhrases)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+
+  // Common substring replacements if phrased slightly differently
+  let replaced = trimmed;
+  for (const [key, val] of Object.entries(clinicalPhrases)) {
+    if (replaced.toLowerCase().includes(key.toLowerCase())) {
+      const reg = new RegExp(key, 'gi');
+      replaced = replaced.replace(reg, val);
+    }
+  }
+
+  return replaced;
 };
 
 export default translations;

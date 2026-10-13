@@ -79,7 +79,7 @@ const Medications = () => {
   const filterOptions = [
     { key: 'ALL', label: t('common.all', 'ALL') },
     { key: 'ACTIVE', label: t('common.active', 'ACTIVE') },
-    { key: 'PAUSED', label: 'PAUSED' },
+    { key: 'PAUSED', label: t('medications.pausedTab', 'PAUSED') },
     { key: 'COMPLETED', label: t('common.completed', 'COMPLETED') },
   ];
 

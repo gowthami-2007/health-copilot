@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import ErrorMessage from '../common/ErrorMessage';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) => {
+  const { t, tClin } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     dosage: '',
@@ -38,7 +40,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.dosage.trim()) {
-      setErrorMsg('Medication name and dosage are required.');
+      setErrorMsg(t('common.error', 'Medication name and dosage are required.'));
       return;
     }
     onSubmit(formData);
@@ -50,7 +52,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
 
       <div className="grid-2">
         <div className="form-group">
-          <label className="form-label" htmlFor="med-name">Medication Name *</label>
+          <label className="form-label" htmlFor="med-name">{t('medications.medName', 'Medication Name')} *</label>
           <input
             id="med-name"
             type="text"
@@ -64,7 +66,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor="med-dosage">Dosage *</label>
+          <label className="form-label" htmlFor="med-dosage">{t('medications.dosage', 'Dosage')} *</label>
           <input
             id="med-dosage"
             type="text"
@@ -80,7 +82,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
 
       <div className="grid-2">
         <div className="form-group">
-          <label className="form-label" htmlFor="med-frequency">Frequency / Schedule *</label>
+          <label className="form-label" htmlFor="med-frequency">{t('medications.frequency', 'Frequency / Schedule')} *</label>
           <select
             id="med-frequency"
             name="frequency"
@@ -88,17 +90,17 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
             value={formData.frequency}
             onChange={handleChange}
           >
-            <option value="Once daily in morning">Once daily (Morning)</option>
-            <option value="Once daily at night">Once daily (Night / Bedtime)</option>
-            <option value="Twice daily (Morning & Night)">Twice daily (Morning & Night)</option>
-            <option value="Three times daily with meals">Three times daily (With meals)</option>
-            <option value="Every 4 to 6 hours as needed">As needed (PRN)</option>
-            <option value="Weekly">Weekly</option>
+            <option value="Once daily in morning">{tClin('Once daily (Morning)')}</option>
+            <option value="Once daily at night">{tClin('Once daily (Night / Bedtime)')}</option>
+            <option value="Twice daily (Morning & Night)">{tClin('Twice daily (Morning & Night)')}</option>
+            <option value="Three times daily with meals">{tClin('Three times daily (With meals)')}</option>
+            <option value="Every 4 to 6 hours as needed">{tClin('As needed (PRN)')}</option>
+            <option value="Weekly">{tClin('Weekly')}</option>
           </select>
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor="med-status">Status</label>
+          <label className="form-label" htmlFor="med-status">{t('common.status', 'Status')}</label>
           <select
             id="med-status"
             name="status"
@@ -106,15 +108,15 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
             value={formData.status}
             onChange={handleChange}
           >
-            <option value="ACTIVE">Active</option>
-            <option value="PAUSED">Paused</option>
-            <option value="COMPLETED">Completed</option>
+            <option value="ACTIVE">{t('common.active', 'Active')}</option>
+            <option value="PAUSED">{t('common.paused', 'Paused')}</option>
+            <option value="COMPLETED">{t('common.completed', 'Completed')}</option>
           </select>
         </div>
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="med-instructions">Special Instructions</label>
+        <label className="form-label" htmlFor="med-instructions">{t('medications.instructions', 'Special Instructions')}</label>
         <input
           id="med-instructions"
           type="text"
@@ -128,7 +130,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
 
       <div className="grid-2">
         <div className="form-group">
-          <label className="form-label" htmlFor="med-start-date">Start Date</label>
+          <label className="form-label" htmlFor="med-start-date">{t('medications.startDate', 'Start Date')}</label>
           <input
             id="med-start-date"
             type="date"
@@ -140,7 +142,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
         </div>
 
         <div className="form-group">
-          <label className="form-label" htmlFor="med-prescriber">Prescribed By Doctor</label>
+          <label className="form-label" htmlFor="med-prescriber">{t('medications.prescribedBy', 'Prescribed By Doctor')}</label>
           <input
             id="med-prescriber"
             type="text"
@@ -154,7 +156,7 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="med-notes">Notes</label>
+        <label className="form-label" htmlFor="med-notes">{t('common.notes', 'Notes')}</label>
         <textarea
           id="med-notes"
           rows={2}
@@ -169,11 +171,11 @@ const MedicationForm = ({ initialData, onSubmit, onCancel, isLoading = false }) 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
         {onCancel && (
           <Button variant="secondary" onClick={onCancel}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
         )}
         <Button id="save-medication-btn" type="submit" variant="primary" isLoading={isLoading}>
-          {initialData ? 'Update Medication' : 'Add Medication'}
+          {initialData ? t('common.save', 'Update Medication') : t('medications.addMedication', 'Add Medication')}
         </Button>
       </div>
     </form>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import translations from '../locales/translations';
+import translations, { translateClinicalPhrase } from '../locales/translations';
 import useAuth from '../hooks/useAuth';
 
 export const LanguageContext = createContext(null);
@@ -69,11 +69,22 @@ export const LanguageProvider = ({ children }) => {
     [language]
   );
 
+  /**
+   * Translate clinical instructions or frequency phrases (e.g. 'Once daily with meals')
+   */
+  const tClin = useCallback(
+    (phrase) => {
+      return translateClinicalPhrase(phrase, language);
+    },
+    [language]
+  );
+
   const value = {
     language,
     isTelugu: language === 'te',
     setLanguage,
     t,
+    tClin,
     translations: translations[language] || translations.en,
   };
 
