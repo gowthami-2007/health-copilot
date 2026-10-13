@@ -83,15 +83,16 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const res = await authService.register({ name, email, password, confirmPassword });
-      // If server returned a session token immediately (e.g. dev/auto-verified)
-      if (res.data?.token) {
-        const { user: userData, token: userToken } = res.data;
+      const payload = res.data || res;
+      // If server returned a session token immediately (auto-login)
+      if (payload?.token) {
+        const { user: userData, token: userToken } = payload;
         setUser(userData);
         setToken(userToken);
         localStorage.setItem('health_copilot_token', userToken);
         localStorage.setItem('health_copilot_user', JSON.stringify(userData));
       }
-      return res.data;
+      return payload;
     } catch (err) {
       setError(err.message || 'Registration failed');
       throw err;

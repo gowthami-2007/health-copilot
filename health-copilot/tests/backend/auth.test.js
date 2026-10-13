@@ -68,7 +68,7 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     }, /Passwords do not match/);
   });
 
-  test('AuthService: registers new user in unverified state and sends verification', async () => {
+  test('AuthService: directly creates verified account and returns session token', async () => {
     const testEmail = `test_reg_${Date.now()}@example.com`;
     const result = await authService.register({
       name: 'Dr. John Watson',
@@ -77,10 +77,11 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     });
 
     assert.ok(result.user, 'User object must be returned');
-    assert.strictEqual(result.requiresVerification, true);
+    assert.ok(result.token, 'Session token must be returned');
+    assert.strictEqual(result.requiresVerification, false);
     assert.strictEqual(result.user.email, testEmail);
     assert.strictEqual(result.user.name, 'Dr. John Watson');
-    assert.strictEqual(result.user.isEmailVerified, false);
+    assert.strictEqual(result.user.isEmailVerified, true);
     assert.strictEqual(result.user.password, undefined, 'Password field must not be exposed');
   });
 
@@ -107,28 +108,21 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     );
   });
 
-  test('AuthService: prevents login before email verification', async () => {
-    const testEmail = `test_unverified_${Date.now()}@example.com`;
+  test('AuthService: allows immediate login after account creation', async () => {
+    const testEmail = `test_verified_${Date.now()}@example.com`;
     const testPass = 'CorrectPassword123!';
     await authService.register({
-      name: 'Unverified Tester',
+      name: 'Verified Tester',
       email: testEmail,
       password: testPass,
     });
 
-    await assert.rejects(
-      async () => {
-        await authService.login({
-          email: testEmail,
-          password: testPass,
-        });
-      },
-      (err) => {
-        assert.strictEqual(err.statusCode, 403);
-        assert.ok(err.details?.requiresVerification);
-        return true;
-      }
-    );
+    const loginRes = await authService.login({
+      email: testEmail,
+      password: testPass,
+    });
+    assert.ok(loginRes.token);
+    assert.strictEqual(loginRes.user.email, testEmail);
   });
 
   test('AuthService: verifies email with 6-digit code and logs user in', async () => {

@@ -112,12 +112,8 @@ const Register = () => {
         formData.confirmPassword
       );
 
-      // If already verified or immediate session
-      if (res?.token) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        setIsRegisteredSuccess(true);
-      }
+      // Account created immediately, navigate directly to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       if (err.status === 409) {
         setErrorMsg('An account with this email already exists. Please sign in instead.');

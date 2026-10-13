@@ -14,7 +14,7 @@ const {
 
 class AuthService {
   /**
-   * Registers a new user with an unverified email and sends verification link/OTP.
+   * Registers a new user directly in verified state and returns active session JWT.
    */
   async register({ name, email, password }) {
     const normalizedEmail = email.trim().toLowerCase();
@@ -28,35 +28,23 @@ class AuthService {
     // Hash password securely
     const hashedPassword = await hashPassword(password);
 
-    // Generate secure email verification token and numeric OTP
-    const { rawToken, hashedToken } = generateSecureToken();
-    const verificationCode = generateNumericCode();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    // Create user in unverified state
+    // Create user in verified state directly
     const newUser = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      isEmailVerified: false,
-      emailVerificationToken: hashedToken,
-      emailVerificationCode: verificationCode,
-      emailVerificationExpires: expiresAt,
+      isEmailVerified: true,
       authProvider: 'local',
     });
 
-    // Send verification email
-    await emailService.sendVerificationEmail({
-      to: normalizedEmail,
-      name,
-      token: rawToken,
-      code: verificationCode,
-    });
+    // Generate JWT session token immediately
+    const token = generateToken(newUser._id.toString(), { email: newUser.email });
 
     return {
       user: newUser.toJSON(),
-      requiresVerification: true,
-      message: 'Account created! We sent a verification link to your email address.',
+      token,
+      requiresVerification: false,
+      message: 'Account created successfully! Welcome to HealthCopilot.',
     };
   }
 
@@ -191,12 +179,13 @@ class AuthService {
       throw new UnauthorizedError('Invalid email or password.');
     }
 
-    // Check email verification state
+    // Auto-verify if legacy user hasn't been verified yet
     if (!user.isEmailVerified) {
-      throw new ForbiddenError(
-        'Your email address has not been verified yet. Please check your inbox or request a new verification email.',
-        { email: user.email, requiresVerification: true }
-      );
+      user.isEmailVerified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationCode = undefined;
+      user.emailVerificationExpires = undefined;
+      await user.save();
     }
 
     // Generate JWT token
