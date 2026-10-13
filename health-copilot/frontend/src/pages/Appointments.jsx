@@ -17,12 +17,13 @@ const Appointments = () => {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
 
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await appointmentService.getAppointments(filterStatus);
+      const res = await appointmentService.getAppointments(filterStatus, filterType);
       setAppointments(res.data?.appointments || []);
     } catch (err) {
       console.error('Failed to load appointments:', err);
@@ -30,7 +31,7 @@ const Appointments = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, filterType]);
 
   useEffect(() => {
     fetchAppointments();
@@ -109,27 +110,68 @@ const Appointments = () => {
 
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {['ALL', 'UPCOMING', 'COMPLETED', 'CANCELLED'].map((status) => (
-          <button
-            key={status}
-            type="button"
-            onClick={() => setFilterStatus(status)}
-            style={{
-              padding: '0.4rem 0.85rem',
-              borderRadius: 'var(--radius-full)',
-              border: `1px solid ${filterStatus === status ? 'var(--primary)' : 'var(--border-light)'}`,
-              backgroundColor: filterStatus === status ? 'var(--primary)' : '#ffffff',
-              color: filterStatus === status ? '#ffffff' : 'var(--text-muted)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {status}
-          </button>
-        ))}
+      {/* Category Tabs & Status Filter */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        marginBottom: '1.5rem',
+        paddingBottom: '1rem',
+        borderBottom: '1px solid var(--border-light)'
+      }}>
+        {/* Category Type Filter */}
+        <div style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#f1f5f9', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
+          {[
+            { id: 'ALL', label: 'All Records' },
+            { id: 'APPOINTMENT', label: 'Appointments' },
+            { id: 'CONSULTATION', label: 'Consultations' },
+          ].map((typeItem) => (
+            <button
+              key={typeItem.id}
+              type="button"
+              onClick={() => setFilterType(typeItem.id)}
+              style={{
+                padding: '0.4rem 0.9rem',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: filterType === typeItem.id ? '#ffffff' : 'transparent',
+                color: filterType === typeItem.id ? 'var(--text-main)' : 'var(--text-muted)',
+                boxShadow: filterType === typeItem.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                fontSize: '0.825rem',
+                fontWeight: filterType === typeItem.id ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {typeItem.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status Filter */}
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          {['ALL', 'UPCOMING', 'COMPLETED', 'CANCELLED'].map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setFilterStatus(status)}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: 'var(--radius-full)',
+                border: `1px solid ${filterStatus === status ? 'var(--primary)' : 'var(--border-light)'}`,
+                backgroundColor: filterStatus === status ? 'var(--primary)' : '#ffffff',
+                color: filterStatus === status ? '#ffffff' : 'var(--text-muted)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && appointments.length === 0 ? (
@@ -151,10 +193,11 @@ const Appointments = () => {
           setIsModalOpen(false);
           setEditingAppointment(null);
         }}
-        title={editingAppointment ? 'Edit Appointment' : 'Schedule New Appointment'}
+        title={editingAppointment ? 'Edit Medical Schedule' : filterType === 'CONSULTATION' ? 'Record Doctor Consultation' : 'Schedule New Appointment'}
       >
         <AppointmentForm
           initialData={editingAppointment}
+          defaultType={filterType === 'CONSULTATION' ? 'CONSULTATION' : 'APPOINTMENT'}
           onSubmit={handleCreateOrUpdate}
           onCancel={() => {
             setIsModalOpen(false);

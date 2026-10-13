@@ -103,6 +103,30 @@ const documentSchema = new mongoose.Schema(
         followUpInstructions: [{ type: String }],
       },
       allergies: [{ type: String }],
+      appointments: [
+        {
+          doctorName: { type: String, default: '' },
+          specialty: { type: String, default: 'General Practitioner' },
+          date: { type: Date, default: null },
+          time: { type: String, default: '10:00 AM' },
+          location: { type: String, default: '' },
+          reason: { type: String, default: '' },
+          notes: { type: String, default: '' },
+          type: { type: String, default: 'APPOINTMENT' },
+        },
+      ],
+      consultations: [
+        {
+          doctorName: { type: String, default: '' },
+          specialty: { type: String, default: 'General Practitioner' },
+          date: { type: Date, default: null },
+          time: { type: String, default: '10:00 AM' },
+          location: { type: String, default: '' },
+          reason: { type: String, default: '' },
+          notes: { type: String, default: '' },
+          type: { type: String, default: 'CONSULTATION' },
+        },
+      ],
     },
     chunks: [
       {

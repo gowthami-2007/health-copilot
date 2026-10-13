@@ -17,6 +17,7 @@ import DocumentDetails from '../pages/DocumentDetails';
 import Assistant from '../pages/Assistant';
 import Medications from '../pages/Medications';
 import Appointments from '../pages/Appointments';
+import Consultations from '../pages/Consultations';
 import TimelinePage from '../pages/Timeline';
 import Profile from '../pages/Profile';
 import Settings from '../pages/Settings';
@@ -78,6 +79,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Appointments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/consultations"
+        element={
+          <ProtectedRoute>
+            <Consultations />
           </ProtectedRoute>
         }
       />

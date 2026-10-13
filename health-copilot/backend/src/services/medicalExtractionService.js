@@ -218,6 +218,323 @@ class MedicalExtractionService {
   }
 
   /**
+   * Flexible Date Parser for clinical documents
+   */
+  parseFlexibleDate(dateStr, referenceDate = new Date()) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const clean = dateStr.trim().replace(/^[,\-\.\s:]+|[,\-\.\s:]+$/g, '');
+
+    // 1. Relative phrases: "after 7 days", "in 2 weeks", "after 1 month"
+    const relMatch = clean.match(/(?:after|in)\s+(\d+)\s*(days?|weeks?|months?)/i);
+    if (relMatch) {
+      const num = parseInt(relMatch[1], 10);
+      const unit = relMatch[2].toLowerCase();
+      const base = referenceDate instanceof Date && !isNaN(referenceDate.getTime()) ? new Date(referenceDate) : new Date();
+      if (unit.startsWith('day')) base.setDate(base.getDate() + num);
+      else if (unit.startsWith('week')) base.setDate(base.getDate() + (num * 7));
+      else if (unit.startsWith('month')) base.setMonth(base.getMonth() + num);
+      return base;
+    }
+
+    // 2. Format: YYYY-MM-DD or YYYY/MM/DD
+    const isoMatch = clean.match(/\b(20\d\d)[-\/\.](0?[1-9]|1[0-2])[-\/\.](0?[1-9]|[12]\d|3[01])\b/);
+    if (isoMatch) {
+      const d = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // 3. Format: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+    const dmyMatch = clean.match(/\b(0?[1-9]|[12]\d|3[01])[-\/\.](0?[1-9]|1[0-2])[-\/\.](20\d\d|\d{2})\b/);
+    if (dmyMatch) {
+      let year = parseInt(dmyMatch[3], 10);
+      if (year < 100) year += 2000;
+      const d = new Date(year, parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // 4. Format: DD Month YYYY or Month DD, YYYY
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthNameMatch = clean.match(/\b(?:(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(20\d\d)|([A-Za-z]+)\s+(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?,?\s+(20\d\d))\b/i);
+    if (monthNameMatch) {
+      const dayStr = monthNameMatch[1] || monthNameMatch[5];
+      const mStr = (monthNameMatch[2] || monthNameMatch[4]).toLowerCase().substring(0, 3);
+      const yStr = monthNameMatch[3] || monthNameMatch[6];
+      const mIndex = months.indexOf(mStr);
+      if (mIndex !== -1 && dayStr && yStr) {
+        const d = new Date(parseInt(yStr, 10), mIndex, parseInt(dayStr, 10));
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+
+    // 5. Standard fallback
+    const direct = new Date(clean);
+    if (!isNaN(direct.getTime()) && direct.getFullYear() >= 2000 && direct.getFullYear() <= 2050) {
+      return direct;
+    }
+
+    return null;
+  }
+
+  /**
+   * Clinical Time Parser
+   */
+  parseTime(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return '10:00 AM';
+    // Match 12-hour: 10:30 AM or 10:30AM
+    const m12 = timeStr.match(/\b(0?[1-9]|1[0-2]):([0-5]\d)\s*(AM|PM|am|pm)\b/i);
+    if (m12) {
+      const hr = parseInt(m12[1], 10);
+      const min = m12[2];
+      const meridiem = m12[3].toUpperCase();
+      return `${hr < 10 ? '0' + hr : hr}:${min} ${meridiem}`;
+    }
+
+    // Match 12-hour without minutes: 10 AM, 3 PM
+    const m12NoMin = timeStr.match(/\b(0?[1-9]|1[0-2])\s*(AM|PM|am|pm)\b/i);
+    if (m12NoMin) {
+      const hr = parseInt(m12NoMin[1], 10);
+      const meridiem = m12NoMin[2].toUpperCase();
+      return `${hr < 10 ? '0' + hr : hr}:00 ${meridiem}`;
+    }
+
+    // Match 24-hour: 14:30 or 09:15
+    const m24 = timeStr.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    if (m24) {
+      let hr = parseInt(m24[1], 10);
+      const min = m24[2];
+      const meridiem = hr >= 12 ? 'PM' : 'AM';
+      if (hr > 12) hr -= 12;
+      if (hr === 0) hr = 12;
+      return `${hr < 10 ? '0' + hr : hr}:${min} ${meridiem}`;
+    }
+
+    return '10:00 AM';
+  }
+
+  /**
+   * Extract Doctor / Healthcare Provider Name
+   */
+  extractDoctorName(text, healthcareProvider = '') {
+    // 1. Check for "with Dr. [Name]" or "by Dr. [Name]" or "Consultant Dr. [Name]"
+    const withDr = text.match(/(?:with|by|from|consultant|doctor)\s+(Dr\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)(?:\s|$|[^a-zA-Z])/);
+    if (withDr) {
+      let clean = withDr[1].trim();
+      if (!clean.startsWith('Dr.')) clean = clean.replace(/^Dr\s+/i, 'Dr. ');
+      return clean;
+    }
+
+    // 2. Doctor: Name or Consultant: Name
+    const drRegex = /(?:Dr\.|Doctor|Consultant|Physician|Attending\s*(?:Physician|Doctor)?|Prescribed\s*by|Consulted\s*by|Seen\s*by|Treated\s*by)\s*[:\-]?\s*([A-Za-z\s\.\-]{2,40})/gi;
+    let match;
+    while ((match = drRegex.exec(text)) !== null) {
+      let raw = match[1].trim();
+      // Skip if raw begins with non-name document titles
+      if (/^(?:Consultation|Visit|Appointment|Slip|Note|Report|Prescription|Office|Examination|Summary|Review)\b/i.test(raw)) {
+        continue;
+      }
+      raw = raw.replace(/\b(MBBS|MD|MS|FRCP|MRCP|FACS|BAMS|BHMS|BDS|MDS|DNB|Reg|Date|Age|Sex|Gender|Phone|Ph|Mob|No|Room|Dept|Clinic|Hospital|Specialist)\b.*/i, '').trim();
+      raw = raw.replace(/[,\-:].*$/, '').trim();
+      if (raw.length >= 3 && !/^(the|a|an|patient|name|report|test|hospital|clinic|center)$/i.test(raw)) {
+        if (!raw.toLowerCase().startsWith('dr.') && !raw.toLowerCase().startsWith('dr ')) {
+          return `Dr. ${raw}`;
+        }
+        return raw.startsWith('Dr ') ? raw.replace(/^Dr\s+/i, 'Dr. ') : raw;
+      }
+    }
+
+    // 3. Standalone Dr. First Last anywhere in text
+    const standaloneMatches = [...text.matchAll(/\b(Dr\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g)];
+    for (const m of standaloneMatches) {
+      let clean = m[1].trim();
+      if (!/^(?:Dr\.?\s+(?:Consultation|Visit|Appointment|Slip|Note|Report|Prescription))/i.test(clean)) {
+        if (!clean.startsWith('Dr.')) clean = clean.replace(/^Dr\s+/i, 'Dr. ');
+        return clean;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Detect Clinical Specialty
+   */
+  detectSpecialty(text) {
+    const SPECIALTY_KEYWORDS = [
+      { pattern: /cardio|heart/i, name: 'Cardiology' },
+      { pattern: /endocrin|diabet/i, name: 'Endocrinology' },
+      { pattern: /derm|skin/i, name: 'Dermatology' },
+      { pattern: /neuro|brain/i, name: 'Neurology' },
+      { pattern: /ortho|bone|joint/i, name: 'Orthopedics' },
+      { pattern: /pediatr|child/i, name: 'Pediatrics' },
+      { pattern: /psych|mental/i, name: 'Psychiatry' },
+      { pattern: /gastro|digest|liver/i, name: 'Gastroenterology' },
+      { pattern: /ophthal|eye/i, name: 'Ophthalmology' },
+      { pattern: /pulmon|chest|lung/i, name: 'Pulmonology' },
+      { pattern: /nephro|kidney|renal/i, name: 'Nephrology' },
+      { pattern: /oncol|cancer/i, name: 'Oncology' },
+      { pattern: /gynec|obg|obstet/i, name: 'Gynecology' },
+      { pattern: /\bent\b|otolaryng|throat|\bear\b/i, name: 'ENT' },
+      { pattern: /dent|oral/i, name: 'Dentistry' },
+      { pattern: /urolog/i, name: 'Urology' },
+      { pattern: /general\s*physician|general\s*medicine|internal\s*medicine/i, name: 'General Medicine' },
+    ];
+
+    for (const item of SPECIALTY_KEYWORDS) {
+      if (item.pattern.test(text)) {
+        return item.name;
+      }
+    }
+    return 'General Practitioner';
+  }
+
+  /**
+   * Dedicated Appointment & Consultation Extractor
+   */
+  extractAppointmentsAndConsultations(text = '', documentDate = null, healthcareProvider = '', diagnoses = []) {
+    const appointments = [];
+    const consultations = [];
+
+    const docDoctor = this.extractDoctorName(text, healthcareProvider);
+    const specialty = this.detectSpecialty(text);
+    const location = healthcareProvider || '';
+    const mainDiagnosis = diagnoses.length > 0 ? diagnoses[0] : '';
+
+    const lines = text.split(/\r?\n/);
+
+    const aptRegex = /(?:next\s*appointment|appointment\s*date|appointment|next\s*visit|follow\s*up\s*(?:visit|date|on)?|review\s*(?:on|after|date)?|scheduled\s*(?:visit|date|for))\s*[:\-]?\s*([0-9a-zA-Z\s,\/\.\-]+)/i;
+    const consultRegex = /(?:consultation\s*date|consulted\s*on|date\s*of\s*consultation|visit\s*date|opd\s*date|clinical\s*consultation|consultation)\s*[:\-]?\s*([0-9a-zA-Z\s,\/\.\-]+)/i;
+
+    let foundAptDate = null;
+    let foundAptTime = null;
+    let aptReason = '';
+    let aptNotes = '';
+
+    let foundConsultDate = null;
+    let foundConsultTime = null;
+    let consultReason = mainDiagnosis;
+    let consultNotes = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Check appointment match
+      const aMatch = line.match(aptRegex);
+      if (aMatch && !foundAptDate) {
+        const candidateDate = this.parseFlexibleDate(aMatch[1], documentDate);
+        if (candidateDate) {
+          foundAptDate = candidateDate;
+          foundAptTime = this.parseTime(line);
+          aptReason = `Follow-up / Scheduled visit${mainDiagnosis ? ` for ${mainDiagnosis}` : ''}`;
+          if (lines[i + 1] && lines[i + 1].length < 100 && !lines[i + 1].match(/date|time|rx|dr/i)) {
+            aptNotes = lines[i + 1].trim();
+          }
+        }
+      }
+
+      // Check consultation match
+      const cMatch = line.match(consultRegex);
+      if (cMatch && !foundConsultDate) {
+        const candidateDate = this.parseFlexibleDate(cMatch[1], documentDate);
+        if (candidateDate) {
+          foundConsultDate = candidateDate;
+          foundConsultTime = this.parseTime(line);
+          consultNotes = `Clinical consultation${mainDiagnosis ? ` regarding ${mainDiagnosis}` : ''}`;
+        }
+      }
+    }
+
+    // Continuous text fallback (when text lacks standard newlines)
+    if (!foundAptDate) {
+      const gAptMatch = text.match(/(?:next\s*appointment|appointment\s*date|appointment|next\s*visit|follow\s*up\s*(?:visit|date|on)?|review\s*(?:on|after|date)?|scheduled\s*(?:visit|date|for))\s*[:\-]?\s*([0-9a-zA-Z\s,\/\.\-]+?)(?:\s+(?:at|time|am|pm|\b\d{1,2}:)|[\r\n,\.]|$)/i);
+      if (gAptMatch) {
+        const candidateDate = this.parseFlexibleDate(gAptMatch[1], documentDate);
+        if (candidateDate) {
+          foundAptDate = candidateDate;
+          foundAptTime = this.parseTime(text);
+          aptReason = `Follow-up / Scheduled visit${mainDiagnosis ? ` for ${mainDiagnosis}` : ''}`;
+        }
+      }
+    }
+
+    if (!foundConsultDate) {
+      const gConMatch = text.match(/(?:consultation\s*date|consulted\s*on|date\s*of\s*consultation|visit\s*date|opd\s*date|clinical\s*consultation|report\s*date|date)\s*[:\-]?\s*([0-9a-zA-Z\s,\/\.\-]+?)(?:\s+(?:at|time|am|pm|\b\d{1,2}:)|[\r\n,\.]|$)/i);
+      if (gConMatch) {
+        const candidateDate = this.parseFlexibleDate(gConMatch[1], documentDate);
+        if (candidateDate) {
+          foundConsultDate = candidateDate;
+          foundConsultTime = this.parseTime(text);
+          consultNotes = `Clinical consultation${mainDiagnosis ? ` regarding ${mainDiagnosis}` : ''}`;
+        }
+      }
+    }
+
+    const generalTimeMatch = text.match(/(?:time|at|slot)\s*[:\-]?\s*(\b\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\b)/i);
+    const globalTime = generalTimeMatch ? this.parseTime(generalTimeMatch[1]) : '10:00 AM';
+
+    const isConsultationDoc = /consult(?:ation|ed|ant)|doctor\s*note|clinical\s*note|prescription|opd/i.test(text);
+    const isAppointmentDoc = /appointment|scheduled\s*visit/i.test(text);
+
+    // If an explicit appointment date was found and we have a doctor name
+    if (foundAptDate && docDoctor) {
+      appointments.push({
+        doctorName: docDoctor,
+        specialty,
+        date: foundAptDate,
+        time: foundAptTime || globalTime,
+        location,
+        reason: aptReason || 'Follow-up clinical appointment',
+        notes: aptNotes || `Follow-up visit with ${docDoctor}`,
+        type: 'APPOINTMENT',
+      });
+    }
+
+    // If an explicit consultation date was found and we have a doctor name
+    if (foundConsultDate && docDoctor) {
+      consultations.push({
+        doctorName: docDoctor,
+        specialty,
+        date: foundConsultDate,
+        time: foundConsultTime || globalTime,
+        location,
+        reason: consultReason || 'Clinical doctor consultation',
+        notes: consultNotes || `Doctor consultation record with ${docDoctor}.`,
+        type: 'CONSULTATION',
+      });
+    }
+
+    // If no explicit separate date was found, but document is a Consultation (Doctor Note / Prescription)
+    // with a doctor name and document date:
+    if (consultations.length === 0 && isConsultationDoc && docDoctor && documentDate) {
+      consultations.push({
+        doctorName: docDoctor,
+        specialty,
+        date: documentDate,
+        time: globalTime,
+        location,
+        reason: mainDiagnosis || 'Clinical doctor consultation',
+        notes: `Clinical consultation recorded with ${docDoctor}.${mainDiagnosis ? ` Assessed: ${mainDiagnosis}.` : ''}`,
+        type: 'CONSULTATION',
+      });
+    }
+
+    // If no appointment was found yet, but document is an Appointment confirmation slip with doctor and date:
+    if (appointments.length === 0 && isAppointmentDoc && !isConsultationDoc && docDoctor && (documentDate || foundAptDate)) {
+      appointments.push({
+        doctorName: docDoctor,
+        specialty,
+        date: foundAptDate || documentDate,
+        time: globalTime,
+        location,
+        reason: mainDiagnosis || 'Scheduled clinical appointment',
+        notes: `Scheduled appointment with ${docDoctor}.`,
+        type: 'APPOINTMENT',
+      });
+    }
+
+    return { appointments, consultations };
+  }
+
+  /**
    * Rule-based extraction fallback for lab results and medications
    */
   extractWithRules(text = '') {
@@ -239,10 +556,7 @@ class MedicalExtractionService {
 
       const dMatch = line.match(/(?:date|collected|reported)\s*[:\-]\s*(\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4})/i);
       if (dMatch && !documentDate) {
-        const parsed = new Date(dMatch[1]);
-        if (!isNaN(parsed.getTime())) {
-          documentDate = parsed;
-        }
+        documentDate = this.parseFlexibleDate(dMatch[1]);
       }
 
       const hMatch = line.match(/(?:hospital|laboratory|lab|clinic|center)\s*[:\-]?\s*([a-zA-Z0-9\s,\.]+)/i);
@@ -255,6 +569,19 @@ class MedicalExtractionService {
         const d = diagMatch[1].trim();
         if (d && !diagnoses.includes(d)) diagnoses.push(d);
       }
+    }
+
+    // Continuous text fallbacks for metadata
+    if (!documentDate) {
+      const gDateMatch = text.match(/(?:report\s*date|document\s*date|consultation\s*date|appointment\s*date|visit\s*date|date)\s*[:\-]?\s*(\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4})/i);
+      if (gDateMatch) {
+        documentDate = this.parseFlexibleDate(gDateMatch[1]);
+      }
+    }
+
+    if (!healthcareProvider) {
+      const gHosp = text.match(/(?:healthcare\s*facility|hospital|laboratory|lab|clinic|center)\s*[:\-]?\s*([a-zA-Z0-9\s,\.\-]{3,60})/i);
+      if (gHosp) healthcareProvider = gHosp[1].trim();
     }
 
     // Extract Lab Results
@@ -338,6 +665,13 @@ class MedicalExtractionService {
       }
     }
 
+    const { appointments, consultations } = this.extractAppointmentsAndConsultations(
+      text,
+      documentDate,
+      healthcareProvider,
+      diagnoses
+    );
+
     const reviewStatus = labResults.some((l) => l.abnormalFlag !== 'NORMAL')
       ? 'REVIEW_REQUIRED'
       : 'AUTO_EXTRACTED';
@@ -348,9 +682,11 @@ class MedicalExtractionService {
       healthcareProvider,
       diagnoses,
       reviewStatus,
-      confidenceScore: labResults.length > 0 || prescriptions.length > 0 ? 0.92 : 0.75,
+      confidenceScore: labResults.length > 0 || prescriptions.length > 0 || appointments.length > 0 || consultations.length > 0 ? 0.94 : 0.75,
       labResults,
       prescriptions,
+      appointments,
+      consultations,
       dischargeSummary: {
         admissionDate: null,
         dischargeDate: null,
@@ -387,6 +723,16 @@ class MedicalExtractionService {
 
     if (structuredData.diagnoses && structuredData.diagnoses.length > 0) {
       englishKeyFindings.push(`Documented diagnosis / clinical observation: ${structuredData.diagnoses.join(', ')}`);
+    }
+
+    if (structuredData.appointments && structuredData.appointments.length > 0) {
+      const apt = structuredData.appointments[0];
+      englishKeyFindings.push(`Scheduled appointment: ${apt.doctorName} (${apt.specialty}) on ${new Date(apt.date).toLocaleDateString()} at ${apt.time}.`);
+    }
+
+    if (structuredData.consultations && structuredData.consultations.length > 0) {
+      const con = structuredData.consultations[0];
+      englishKeyFindings.push(`Doctor consultation record: ${con.doctorName} (${con.specialty}) on ${new Date(con.date).toLocaleDateString()} at ${con.time}.`);
     }
 
     const englishAbnormalResults =

@@ -271,6 +271,80 @@ const StructuredDataReview = ({ document, onUpdateSuccess }) => {
         </div>
       )}
 
+      {/* Extracted Appointments & Consultations */}
+      {((structuredData.consultations && structuredData.consultations.length > 0) ||
+        (structuredData.appointments && structuredData.appointments.length > 0)) && (
+        <div className="card" style={{ border: '1px solid #c7d2fe', backgroundColor: '#faf5ff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#5b21b6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              Synced Visits & Consultations
+            </h4>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <a href="/appointments" className="btn btn-secondary btn-sm" style={{ fontSize: '0.78rem' }}>
+                Appointments Page
+              </a>
+              <a href="/consultations" className="btn btn-primary btn-sm" style={{ fontSize: '0.78rem' }}>
+                Consultations Page
+              </a>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {(structuredData.consultations || []).map((con, idx) => (
+              <div key={`con-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #e9d5ff' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                      CONSULTATION
+                    </span>
+                    <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                      {con.doctorName}
+                    </h5>
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Specialty: {con.specialty} • Date: {con.date ? new Date(con.date).toLocaleDateString() : 'Recorded'} • Time: {con.time}
+                  </p>
+                  {con.notes && (
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                      Notes: {con.notes}
+                    </p>
+                  )}
+                </div>
+                <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
+                  Synced
+                </span>
+              </div>
+            ))}
+
+            {(structuredData.appointments || []).map((apt, idx) => (
+              <div key={`apt-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #bae6fd' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                      FOLLOW-UP APPOINTMENT
+                    </span>
+                    <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                      {apt.doctorName}
+                    </h5>
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Specialty: {apt.specialty} • Date: {apt.date ? new Date(apt.date).toLocaleDateString() : 'Upcoming'} • Time: {apt.time}
+                  </p>
+                  {apt.notes && (
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                      Notes: {apt.notes}
+                    </p>
+                  )}
+                </div>
+                <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
+                  Scheduled
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* FHIR Modal Preview */}
       {showFhirModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110, padding: '1rem' }} onClick={() => setShowFhirModal(false)}>

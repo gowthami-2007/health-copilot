@@ -15,8 +15,8 @@ class AppointmentController {
 
   async getAll(req, res, next) {
     try {
-      const { status } = req.query;
-      const appointments = await appointmentService.getAppointments(req.user.id, status);
+      const { status, type } = req.query;
+      const appointments = await appointmentService.getAppointments(req.user.id, status, type);
       return successResponse(res, 'Appointments retrieved', { appointments }, 200);
     } catch (error) {
       next(error);

@@ -29,6 +29,11 @@ const validateAppointment = (data) => {
     reason: data.reason ? data.reason.trim() : '',
     notes: data.notes ? data.notes.trim() : '',
     status: data.status || 'UPCOMING',
+    type: (data.type && ['APPOINTMENT', 'CONSULTATION'].includes(data.type.toUpperCase()))
+      ? data.type.toUpperCase()
+      : 'APPOINTMENT',
+    sourceDocumentId: data.sourceDocumentId || null,
+    autoExtracted: Boolean(data.autoExtracted),
   };
 };
 

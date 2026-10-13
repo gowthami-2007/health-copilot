@@ -25,11 +25,11 @@ function generateClinicalReportPdf({
   if (labResults.length > 0) {
     labResults.forEach((lab) => {
       textLines.push(
-        `• ${lab.testName}: ${lab.result} [Ref: ${lab.referenceRange || 'Standard'}] — Flag: ${lab.abnormalFlag}`
+        `- ${lab.testName}: ${lab.result} [Ref: ${lab.referenceRange || 'Standard'}] - Flag: ${lab.abnormalFlag}`
       );
     });
   } else {
-    textLines.push(`• No quantitative laboratory parameters recorded.`);
+    textLines.push(`- No quantitative laboratory parameters recorded.`);
   }
 
   textLines.push(`--------------------------------------------------------------------------------`);
@@ -38,11 +38,11 @@ function generateClinicalReportPdf({
   if (prescriptions.length > 0) {
     prescriptions.forEach((rx) => {
       textLines.push(
-        `• ${rx.medicationName} | Dosage: ${rx.dosage} | Frequency: ${rx.frequency} (${rx.instructions})`
+        `- ${rx.medicationName} | Dosage: ${rx.dosage} | Frequency: ${rx.frequency} (${rx.instructions})`
       );
     });
   } else {
-    textLines.push(`• No pharmaceutical prescriptions documented.`);
+    textLines.push(`- No pharmaceutical prescriptions documented.`);
   }
 
   textLines.push(`--------------------------------------------------------------------------------`);

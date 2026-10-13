@@ -13,6 +13,7 @@ import {
   LogOut,
   X,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 
@@ -25,6 +26,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Documents', path: '/documents', icon: FileText },
     { name: 'Medications', path: '/medications', icon: Pill },
     { name: 'Appointments', path: '/appointments', icon: Calendar },
+    { name: 'Consultations', path: '/consultations', icon: Stethoscope },
     { name: 'Health Timeline', path: '/timeline', icon: Clock },
     { name: 'Profile & Settings', path: '/profile', icon: User },
   ];

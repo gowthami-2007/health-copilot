@@ -1,8 +1,11 @@
 import api from './api';
 
 export const appointmentService = {
-  async getAppointments(status) {
-    return await api.get('/appointments', { params: { status } });
+  async getAppointments(status, type) {
+    const params = {};
+    if (status && status !== 'ALL') params.status = status;
+    if (type && type !== 'ALL') params.type = type;
+    return await api.get('/appointments', { params });
   },
 
   async getAppointmentById(id) {

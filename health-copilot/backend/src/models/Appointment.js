@@ -47,6 +47,21 @@ const appointmentSchema = new mongoose.Schema(
       enum: ['UPCOMING', 'COMPLETED', 'CANCELLED'],
       default: 'UPCOMING',
     },
+    type: {
+      type: String,
+      enum: ['APPOINTMENT', 'CONSULTATION'],
+      default: 'APPOINTMENT',
+      index: true,
+    },
+    sourceDocumentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Document',
+      default: null,
+    },
+    autoExtracted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -54,5 +69,6 @@ const appointmentSchema = new mongoose.Schema(
 );
 
 appointmentSchema.index({ userId: 1, date: 1 });
+appointmentSchema.index({ userId: 1, type: 1 });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);

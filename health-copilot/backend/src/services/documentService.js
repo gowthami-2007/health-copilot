@@ -132,13 +132,119 @@ class DocumentService {
       doc.status = 'PROCESSED';
       await doc.save();
 
-      // 3. Automatically record to Health Timeline (idempotent / deduplicated)
+      // 3. Automatically synchronize extracted Appointments & Doctor Consultations
+      const Appointment = require('../models/Appointment');
+      const extractedApts = doc.structuredData.appointments || [];
+      const extractedCons = doc.structuredData.consultations || [];
+
+      // Process extracted scheduled appointments
+      for (const item of extractedApts) {
+        if (item.doctorName && item.date) {
+          const aptDate = new Date(item.date);
+          if (!isNaN(aptDate.getTime())) {
+            const existing = await Appointment.findOne({
+              userId,
+              doctorName: item.doctorName.trim(),
+              date: aptDate,
+              type: 'APPOINTMENT',
+            });
+
+            if (!existing) {
+              const newApt = await Appointment.create({
+                userId,
+                doctorName: item.doctorName.trim(),
+                specialty: item.specialty || 'General Practitioner',
+                date: aptDate,
+                time: item.time || '10:00 AM',
+                location: item.location || '',
+                reason: item.reason || `Follow-up visit (${doc.fileName})`,
+                notes: item.notes || `Auto-extracted from document: ${doc.fileName}`,
+                status: 'UPCOMING',
+                type: 'APPOINTMENT',
+                sourceDocumentId: doc._id,
+                autoExtracted: true,
+              });
+
+              await Timeline.create({
+                userId,
+                eventType: 'APPOINTMENT',
+                title: `Scheduled Visit: ${newApt.doctorName}`,
+                description: `Specialty: ${newApt.specialty}. Time: ${newApt.time}. Auto-scheduled from document "${doc.fileName}".`,
+                date: newApt.date,
+                referenceId: newApt._id,
+                metadata: {
+                  appointmentId: newApt._id,
+                  documentId: doc._id,
+                  type: 'APPOINTMENT',
+                  autoExtracted: true,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // Process extracted doctor consultations
+      for (const item of extractedCons) {
+        if (item.doctorName && item.date) {
+          const conDate = new Date(item.date);
+          if (!isNaN(conDate.getTime())) {
+            const existing = await Appointment.findOne({
+              userId,
+              doctorName: item.doctorName.trim(),
+              date: conDate,
+              type: 'CONSULTATION',
+            });
+
+            if (!existing) {
+              const isPast = conDate < new Date();
+              const newCon = await Appointment.create({
+                userId,
+                doctorName: item.doctorName.trim(),
+                specialty: item.specialty || 'General Practitioner',
+                date: conDate,
+                time: item.time || '10:00 AM',
+                location: item.location || '',
+                reason: item.reason || `Clinical Consultation (${doc.fileName})`,
+                notes: item.notes || `Clinical consultation details extracted from: ${doc.fileName}`,
+                status: isPast ? 'COMPLETED' : 'UPCOMING',
+                type: 'CONSULTATION',
+                sourceDocumentId: doc._id,
+                autoExtracted: true,
+              });
+
+              await Timeline.create({
+                userId,
+                eventType: 'APPOINTMENT',
+                title: `Doctor Consultation: ${newCon.doctorName}`,
+                description: `Specialty: ${newCon.specialty}. Time: ${newCon.time}. ${newCon.notes}`,
+                date: newCon.date,
+                referenceId: newCon._id,
+                metadata: {
+                  appointmentId: newCon._id,
+                  documentId: doc._id,
+                  type: 'CONSULTATION',
+                  autoExtracted: true,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Automatically record to Health Timeline (idempotent / deduplicated)
       await Timeline.deleteMany({ referenceId: doc._id, userId });
+      const countsDesc = [];
+      if (doc.structuredData.labResults?.length) countsDesc.push(`${doc.structuredData.labResults.length} lab values`);
+      if (doc.structuredData.prescriptions?.length) countsDesc.push(`${doc.structuredData.prescriptions.length} prescription(s)`);
+      if (extractedApts.length) countsDesc.push(`${extractedApts.length} appointment(s)`);
+      if (extractedCons.length) countsDesc.push(`${extractedCons.length} consultation(s)`);
+
       await Timeline.create({
         userId,
         eventType: 'DOCUMENT',
         title: `Uploaded ${doc.documentType}`,
-        description: `Analyzed "${doc.fileName}". ${doc.structuredData.labResults?.length || 0} lab values and ${doc.structuredData.prescriptions?.length || 0} prescription(s) extracted.`,
+        description: `Analyzed "${doc.fileName}". ${countsDesc.length > 0 ? countsDesc.join(', ') + ' extracted.' : 'Clinical documentation processed.'}`,
         date: doc.structuredData?.documentDate || doc.createdAt,
         referenceId: doc._id,
         metadata: {
@@ -146,6 +252,8 @@ class DocumentService {
           fileName: doc.fileName,
           documentType: doc.documentType,
           reviewStatus: doc.structuredData.reviewStatus,
+          appointmentsCount: extractedApts.length,
+          consultationsCount: extractedCons.length,
         },
       });
 
@@ -333,8 +441,14 @@ class DocumentService {
       }
     }
 
-    // 3. Remove associated Timeline entries
+    // 3. Remove associated Timeline entries and linked auto-extracted appointments/consultations
     await Timeline.deleteMany({ referenceId: doc._id, userId });
+    const Appointment = require('../models/Appointment');
+    const autoApts = await Appointment.find({ sourceDocumentId: doc._id, userId });
+    for (const a of autoApts) {
+      await Timeline.deleteMany({ referenceId: a._id });
+    }
+    await Appointment.deleteMany({ sourceDocumentId: doc._id, userId });
 
     // 4. Secure delete document record enforcing ownership
     await Document.findOneAndDelete({ _id: documentId, userId });

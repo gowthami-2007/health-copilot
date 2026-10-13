@@ -51,7 +51,7 @@ function extractFromPdfStreams(buffer) {
     }
 
     // Extract text in parentheses before Tj, ', "
-    const tjMatches = [...streamText.matchAll(/\(([^)]*)\)\s*(?:Tj|'|")/g)];
+    const tjMatches = [...streamText.matchAll(/\(((?:\\\(|\\\)|[^)])*)\)\s*(?:Tj|'|")/g)];
     for (const t of tjMatches) {
       extractedTokens.push(unescapePdfString(t[1]));
     }

@@ -16,7 +16,7 @@ const SPECIALTIES = [
   'Other',
 ];
 
-const AppointmentForm = ({ initialData, onSubmit, onCancel, isLoading = false }) => {
+const AppointmentForm = ({ initialData, onSubmit, onCancel, isLoading = false, defaultType = 'APPOINTMENT' }) => {
   const [formData, setFormData] = useState({
     doctorName: '',
     specialty: 'General Practitioner',
@@ -26,6 +26,7 @@ const AppointmentForm = ({ initialData, onSubmit, onCancel, isLoading = false })
     reason: '',
     notes: '',
     status: 'UPCOMING',
+    type: defaultType,
   });
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -40,9 +41,12 @@ const AppointmentForm = ({ initialData, onSubmit, onCancel, isLoading = false })
         reason: initialData.reason || '',
         notes: initialData.notes || '',
         status: initialData.status || 'UPCOMING',
+        type: initialData.type || defaultType,
       });
+    } else {
+      setFormData((prev) => ({ ...prev, type: defaultType }));
     }
-  }, [initialData]);
+  }, [initialData, defaultType]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +65,32 @@ const AppointmentForm = ({ initialData, onSubmit, onCancel, isLoading = false })
   return (
     <form onSubmit={handleSubmit}>
       <ErrorMessage message={errorMsg} onDismiss={() => setErrorMsg('')} />
+
+      <div className="form-group" style={{ marginBottom: '1rem' }}>
+        <label className="form-label">Record Category</label>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+            <input
+              type="radio"
+              name="type"
+              value="APPOINTMENT"
+              checked={formData.type === 'APPOINTMENT'}
+              onChange={handleChange}
+            />
+            Scheduled Visit / Appointment
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+            <input
+              type="radio"
+              name="type"
+              value="CONSULTATION"
+              checked={formData.type === 'CONSULTATION'}
+              onChange={handleChange}
+            />
+            Doctor Consultation
+          </label>
+        </div>
+      </div>
 
       <div className="grid-2">
         <div className="form-group">
