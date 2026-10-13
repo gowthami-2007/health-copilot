@@ -81,20 +81,45 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
 
       const docId = response.data?._id;
 
-      // Simulated pipeline progress steps for responsive feedback
+      // Real pipeline progress steps & status verification
       setStep('processing');
-      await new Promise((r) => setTimeout(r, 600));
+      let processedDoc = response.data;
 
-      setStep('extracting');
-      await new Promise((r) => setTimeout(r, 700));
+      if (docId) {
+        setStep('extracting');
+        // Poll document status for up to 8 seconds
+        for (let attempt = 0; attempt < 8; attempt++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          try {
+            const checkRes = await documentService.getDocumentById(docId);
+            if (checkRes.data) {
+              processedDoc = checkRes.data;
+              if (checkRes.data.status === 'PROCESSED' || checkRes.data.status === 'FAILED') {
+                break;
+              }
+            }
+          } catch (pollErr) {
+            // Ignore temporary polling glitch
+          }
+        }
+      }
 
       setStep('summarizing');
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 600));
+
+      if (processedDoc?.status === 'FAILED') {
+        setStep('error');
+        setErrorMsg(
+          processedDoc.failureReason ||
+          "We couldn't extract readable text from this document image. You can still view the original document in your list and review clinical fields manually."
+        );
+        return;
+      }
 
       setStep('complete');
       setTimeout(() => {
-        if (onUploadSuccess) onUploadSuccess(response.data);
-      }, 1000);
+        if (onUploadSuccess) onUploadSuccess(processedDoc || response.data);
+      }, 800);
     } catch (err) {
       console.error('Upload error:', err);
       setStep('error');

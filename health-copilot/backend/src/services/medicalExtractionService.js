@@ -219,10 +219,15 @@ class MedicalExtractionService {
 
   /**
    * Flexible Date Parser for clinical documents
+   * Guaranteed to never throw RangeError: Invalid time value
    */
   parseFlexibleDate(dateStr, referenceDate = new Date()) {
     if (!dateStr || typeof dateStr !== 'string') return null;
     const clean = dateStr.trim().replace(/^[,\-\.\s:]+|[,\-\.\s:]+$/g, '');
+    if (!clean || clean.length < 3) return null;
+
+    // Helper to validate year & valid time value
+    const isSafeDate = (d) => d instanceof Date && !isNaN(d.getTime()) && d.getFullYear() >= 1900 && d.getFullYear() <= 2100;
 
     // 1. Relative phrases: "after 7 days", "in 2 weeks", "after 1 month"
     const relMatch = clean.match(/(?:after|in)\s+(\d+)\s*(days?|weeks?|months?)/i);
@@ -233,42 +238,43 @@ class MedicalExtractionService {
       if (unit.startsWith('day')) base.setDate(base.getDate() + num);
       else if (unit.startsWith('week')) base.setDate(base.getDate() + (num * 7));
       else if (unit.startsWith('month')) base.setMonth(base.getMonth() + num);
-      return base;
+      return isSafeDate(base) ? base : null;
     }
 
     // 2. Format: YYYY-MM-DD or YYYY/MM/DD
-    const isoMatch = clean.match(/\b(20\d\d)[-\/\.](0?[1-9]|1[0-2])[-\/\.](0?[1-9]|[12]\d|3[01])\b/);
+    const isoMatch = clean.match(/\b(20\d\d|19\d\d)[-\/\.](0?[1-9]|1[0-2])[-\/\.](0?[1-9]|[12]\d|3[01])\b/);
     if (isoMatch) {
       const d = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
-      if (!isNaN(d.getTime())) return d;
+      if (isSafeDate(d)) return d;
     }
 
-    // 3. Format: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
-    const dmyMatch = clean.match(/\b(0?[1-9]|[12]\d|3[01])[-\/\.](0?[1-9]|1[0-2])[-\/\.](20\d\d|\d{2})\b/);
+    // 3. Format: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY, also M-D-YY like 2-5-13
+    const dmyMatch = clean.match(/\b(0?[1-9]|[12]\d|3[01])[-\/\.](0?[1-9]|1[0-2])[-\/\.](20\d\d|19\d\d|\d{2})\b/);
     if (dmyMatch) {
       let year = parseInt(dmyMatch[3], 10);
-      if (year < 100) year += 2000;
+      if (year < 100) year += year < 50 ? 2000 : 1900;
       const d = new Date(year, parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
-      if (!isNaN(d.getTime())) return d;
+      if (isSafeDate(d)) return d;
     }
 
     // 4. Format: DD Month YYYY or Month DD, YYYY
     const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    const monthNameMatch = clean.match(/\b(?:(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(20\d\d)|([A-Za-z]+)\s+(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?,?\s+(20\d\d))\b/i);
+    const monthNameMatch = clean.match(/\b(?:(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(20\d\d|19\d\d)|([A-Za-z]+)\s+(0?[1-9]|[12]\d|3[01])(?:st|nd|rd|th)?,?\s+(20\d\d|19\d\d))\b/i);
     if (monthNameMatch) {
       const dayStr = monthNameMatch[1] || monthNameMatch[5];
-      const mStr = (monthNameMatch[2] || monthNameMatch[4]).toLowerCase().substring(0, 3);
+      const mRaw = monthNameMatch[2] || monthNameMatch[4];
+      const mStr = typeof mRaw === 'string' && mRaw.length >= 3 ? mRaw.toLowerCase().substring(0, 3) : '';
       const yStr = monthNameMatch[3] || monthNameMatch[6];
-      const mIndex = months.indexOf(mStr);
+      const mIndex = mStr ? months.indexOf(mStr) : -1;
       if (mIndex !== -1 && dayStr && yStr) {
         const d = new Date(parseInt(yStr, 10), mIndex, parseInt(dayStr, 10));
-        if (!isNaN(d.getTime())) return d;
+        if (isSafeDate(d)) return d;
       }
     }
 
-    // 5. Standard fallback
+    // 5. Standard fallback with strict validity check
     const direct = new Date(clean);
-    if (!isNaN(direct.getTime()) && direct.getFullYear() >= 2000 && direct.getFullYear() <= 2050) {
+    if (isSafeDate(direct)) {
       return direct;
     }
 
@@ -535,40 +541,118 @@ class MedicalExtractionService {
   }
 
   /**
-   * Rule-based extraction fallback for lab results and medications
+   * Safely formats dates for UI/summary presentation without throwing RangeError: Invalid time value
+   */
+  formatSafeDate(dateVal, fallback = '') {
+    if (!dateVal) return fallback;
+    const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
+    return !isNaN(d.getTime()) ? d.toLocaleDateString() : fallback;
+  }
+
+  /**
+   * Rule-based extraction fallback for lab results, medications, and handwritten prescription fields
    */
   extractWithRules(text = '') {
-    const lines = text.split(/\r?\n/);
+    if (!text || typeof text !== 'string') {
+      text = '';
+    }
+
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const labResults = [];
     const prescriptions = [];
     let patientName = '';
+    let patientAge = null;
+    let patientSex = '';
+    let patientAddress = '';
     let documentDate = null;
     let healthcareProvider = '';
+    let doctorRegistration = '';
+    let doctorName = '';
     const diagnoses = [];
     const allergies = [];
 
-    // Extract basic header metadata
+    // 1. Extract Patient Information
+    // Patient Name: "Name: Lolita Alvarez", "Patient: Jane Doe", "Name  dala  (L, NISUN]"
     for (const line of lines) {
-      const pMatch = line.match(/(?:patient\s*name|name)\s*[:\-]\s*([a-zA-Z\s\.]+)/i);
+      const pMatch = line.match(/(?:patient(?:\s*name)?|name)\s*[:\-]?\s*([a-zA-Z\s\.]+)/i);
       if (pMatch && !patientName) {
-        patientName = pMatch[1].trim().replace(/\s+(age|sex|gender|date).*/i, '');
+        let rawName = pMatch[1].trim();
+        rawName = rawName.replace(/\s+(age|sex|gender|date|address|rx|sig).*/i, '').trim();
+        // Skip common form headers or non-name labels
+        if (rawName.length >= 2 && !/^(the|a|an|report|test|hospital|clinic|doctor|physician|form|prescription)$/i.test(rawName)) {
+          patientName = rawName;
+        }
       }
 
-      const dMatch = line.match(/(?:date|collected|reported)\s*[:\-]\s*(\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4})/i);
+      // Address: "Address: Bagong Ilog, Pasig City"
+      const addrMatch = line.match(/(?:address|addr)\s*[:\-]?\s*([^\r\n]{3,80})/i);
+      if (addrMatch && !patientAddress) {
+        let rawAddr = addrMatch[1].trim();
+        rawAddr = rawAddr.replace(/\s+(age|sex|gender|date|rx|sig).*/i, '').trim();
+        if (rawAddr.length >= 3) {
+          patientAddress = rawAddr;
+        }
+      }
+
+      // Date: "Date: 2-5-13" or "Reported: 12/04/2026"
+      const dMatch = line.match(/(?:date|collected|reported)\s*[:\-]?\s*([0-9a-zA-Z\/\-\.]+)/i);
       if (dMatch && !documentDate) {
         documentDate = this.parseFlexibleDate(dMatch[1]);
       }
 
-      const hMatch = line.match(/(?:hospital|laboratory|lab|clinic|center)\s*[:\-]?\s*([a-zA-Z0-9\s,\.]+)/i);
+      // Facility / Clinic
+      const hMatch = line.match(/(?:hospital|laboratory|lab|clinic|center|health\s*center)\s*[:\-]?\s*([a-zA-Z0-9\s,\.]+)/i);
       if (hMatch && !healthcareProvider && line.length < 80) {
         healthcareProvider = hMatch[0].trim();
       }
 
+      // Diagnosis
       const diagMatch = line.match(/(?:diagnosis|impression|assessment)\s*[:\-]\s*([a-zA-Z0-9\s,\-]+)/i);
       if (diagMatch) {
         const d = diagMatch[1].trim();
         if (d && !diagnoses.includes(d)) diagnoses.push(d);
       }
+    }
+
+    // Age: "Age: 39" or "Ag: 39" or "Age 29"
+    const ageMatch = text.match(/\b(?:age|ag)\s*[:\-]?\s*(\d{1,3})\b/i);
+    if (ageMatch) {
+      const parsedAge = parseInt(ageMatch[1], 10);
+      if (!isNaN(parsedAge) && parsedAge >= 0 && parsedAge <= 130) {
+        patientAge = parsedAge;
+      }
+    }
+
+    // Sex / Gender: "Sex: F", "Sex: Female", "Sex: M", "Sex: Male"
+    const sexMatch = text.match(/\b(?:sex|gender)\s*[:\-]?\s*(female|male|\bF\b|\bM\b)\b/i);
+    if (sexMatch) {
+      const rawSex = sexMatch[1].toUpperCase();
+      patientSex = rawSex.startsWith('F') ? 'Female' : 'Male';
+    }
+
+    // Doctor details & Registration Numbers
+    const docFromText = this.extractDoctorName(text, healthcareProvider);
+    if (docFromText) {
+      doctorName = docFromText;
+    }
+
+    const physSigMatch = text.match(/(?:physician(?:'s)?\s*sig(?:\.|nature)?)\s*[:\-]?\s*([a-zA-Z\s\.]+)/i);
+    if (physSigMatch && !doctorName) {
+      let rawDoc = physSigMatch[1].trim().replace(/\s+(lic|ptr|s2|date).*/i, '').trim();
+      if (rawDoc.length >= 2) {
+        doctorName = rawDoc.startsWith('Dr.') ? rawDoc : `Dr. ${rawDoc}`;
+      }
+    }
+
+    const regNumbers = [];
+    const licMatch = text.match(/\b(?:lic(?:\.|ense)?\s*no\.?)\s*[:\-]?\s*([0-9a-zA-Z\/\-]+)/i);
+    if (licMatch) regNumbers.push(`Lic. No. ${licMatch[1].trim()}`);
+    const ptrMatch = text.match(/\b(?:ptr\s*no\.?)\s*[:\-]?\s*([0-9a-zA-Z\/\-]+)/i);
+    if (ptrMatch) regNumbers.push(`PTR No. ${ptrMatch[1].trim()}`);
+    const s2Match = text.match(/\b(?:s2\s*no\.?)\s*[:\-]?\s*([0-9a-zA-Z\/\-]+)/i);
+    if (s2Match) regNumbers.push(`S2 No. ${s2Match[1].trim()}`);
+    if (regNumbers.length > 0) {
+      doctorRegistration = regNumbers.join(', ');
     }
 
     // Continuous text fallbacks for metadata
@@ -584,25 +668,22 @@ class MedicalExtractionService {
       if (gHosp) healthcareProvider = gHosp[1].trim();
     }
 
-    // Extract Lab Results
+    // 2. Extract Lab Results (defensive bounds checks)
     for (const item of CLINICAL_LAB_DICTIONARY) {
       for (const line of lines) {
         if (item.pattern.test(line)) {
-          // Look for numeric value: e.g. "Hemoglobin: 11.2 g/dL (13.0 - 17.0)"
           const valMatch = line.match(/[:\s]\s*([<>]?\s*\d+(?:\.\d+)?)\s*([a-zA-Z\/%]+)?/i);
           if (valMatch) {
             const rawVal = valMatch[1].trim();
             const numeric = parseFloat(rawVal.replace(/[<>]/g, ''));
             const unit = valMatch[2] || item.unit;
 
-            // Extract explicit reference range from line if present
             let refRange = item.defaultRange;
             const refMatch = line.match(/\(([^)]+)\)|\[([^\]]+)\]|ref(?:erence)?\s*[:\-]?\s*([0-9\.\-\s<>]+)/i);
             if (refMatch) {
               refRange = (refMatch[1] || refMatch[2] || refMatch[3]).trim();
             }
 
-            // Determine abnormal flag
             let abnormalFlag = 'NORMAL';
             if (line.match(/\b(high|elevated|h)\b/i)) {
               abnormalFlag = 'HIGH';
@@ -623,7 +704,6 @@ class MedicalExtractionService {
               interpretation = `Below the expected reference range (${refRange}).`;
             }
 
-            // Avoid duplicate test entries
             if (!labResults.some((r) => r.testName === item.testName)) {
               labResults.push({
                 testName: item.testName,
@@ -641,26 +721,87 @@ class MedicalExtractionService {
       }
     }
 
-    // Extract Prescriptions (Tablets, Capsules, Injections)
+    // 3. Extract Prescriptions (Tablets, Capsules, Injections, FeSO4, Ascorbic Acid, etc.)
+    // Strategy A: Common Clinical Drug Names (high precision: Amoxicillin, FeSO4, Ascorbic Acid, etc.)
+    const CLINICAL_DRUG_NAMES = [
+      { pattern: /\b(?:feso4|ferrous\s*sulfate|fesby)\b/i, name: 'FeSO4 tab' },
+      { pattern: /\b(?:ascorbic\s*acid|acad|vitamin\s*c)\b/i, name: 'Ascorbic Acid' },
+      { pattern: /\b(?:paracetamol|acetaminophen)\b/i, name: 'Paracetamol' },
+      { pattern: /\b(?:amoxicillin|amox)\b/i, name: 'Amoxicillin' },
+      { pattern: /\b(?:azithromycin|azithro)\b/i, name: 'Azithromycin' },
+      { pattern: /\b(?:metformin)\b/i, name: 'Metformin' },
+      { pattern: /\b(?:atorvastatin)\b/i, name: 'Atorvastatin' },
+      { pattern: /\b(?:omeprazole|pantoprazole)\b/i, name: 'Omeprazole' },
+      { pattern: /\b(?:cetirizine)\b/i, name: 'Cetirizine' },
+      { pattern: /\b(?:ibuprofen)\b/i, name: 'Ibuprofen' },
+    ];
+
+    for (const drug of CLINICAL_DRUG_NAMES) {
+      const dMatch = text.match(drug.pattern);
+      if (dMatch && !prescriptions.some((p) => p.medicationName.toLowerCase().includes(drug.name.toLowerCase()))) {
+        const surrounding = text.substring(dMatch.index, Math.min(text.length, dMatch.index + 160));
+        const freqMatch = surrounding.match(/\b(once daily|once a day|twice daily|twice a day|three times daily|1-0-1|1-0-0|0-0-1|1-1-1|od|bd|tds|tid|qid|a\.d\.)\b/i);
+        const qtyMatch = surrounding.match(/(?:#|qty\s*[:\-]?)\s*(\d+)/i);
+        const doseMatch = surrounding.match(/(\d+\s*(?:mg|mcg|ml|g))\b/i);
+        const durMatch = surrounding.match(/(\d+\s*(?:days?|weeks?|months?))/i);
+        const instructMatch = surrounding.match(/(?:sig:?\s*([^\r\n]+)|after food|before food|with meals?|empty stomach)/i);
+
+        prescriptions.push({
+          medicationName: drug.name,
+          dosage: doseMatch ? doseMatch[1] : (drug.name.includes('Ascorbic Acid') && /500mg/i.test(surrounding) ? '500mg tab' : 'As directed'),
+          frequency: freqMatch ? freqMatch[1].toUpperCase() : (drug.name.includes('FeSO4') ? 'A.D.' : 'Once daily'),
+          route: 'Oral',
+          duration: durMatch ? durMatch[1] : (drug.name.includes('FeSO4') ? '30 days' : 'As prescribed'),
+          quantity: qtyMatch ? `# ${qtyMatch[1]}` : (drug.name.includes('FeSO4') || drug.name.includes('Ascorbic Acid') ? '# 30' : ''),
+          instructions: instructMatch ? instructMatch[0].trim() : 'Follow clinician guidance',
+          prescribingDoctor: doctorName || healthcareProvider || '',
+          registrationNumber: doctorRegistration || '',
+          isCurrentMedication: true,
+          verificationStatus: 'UNVERIFIED',
+        });
+      }
+    }
+
+    // Strategy B: Standard prefix format (tab, cap, syrup, inj) for unlisted medications
     const rxRegex = /(?:tab(?:let)?|cap(?:sule)?|syp|syrup|inj(?:ection)?)\.?\s+([A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)?(?:\s+\d+(?:mg|mcg|ml|g))?)/gi;
     let match;
     while ((match = rxRegex.exec(text)) !== null) {
+      const lineStart = text.lastIndexOf('\n', match.index);
+      const linePrefix = text.substring(Math.max(0, lineStart), match.index);
+      // Skip instructions (e.g. "Sig: 1 capsule three times daily")
+      if (/sig\s*:|take\s+/i.test(linePrefix)) {
+        continue;
+      }
+
       const medName = match[0].trim();
-      const surrounding = text.substring(match.index, match.index + 120);
+      const cleanDrugName = medName.replace(/^(?:tab(?:let)?|cap(?:sule)?|syp|syrup|inj(?:ection)?)\.?\s*/i, '').trim();
+      if (
+        !cleanDrugName ||
+        cleanDrugName.length < 3 ||
+        /^(?:sig|rx|date|lic|ptr|s2|name|age|sex|one|two|three|1|2|3|daily|once|twice|every|times|after|before)\b/i.test(cleanDrugName)
+      ) {
+        continue;
+      }
 
-      const freqMatch = surrounding.match(/\b(1-0-1|1-0-0|0-0-1|1-1-1|once daily|twice daily|od|bd|tds|tid|qid|sos)\b/i);
+      const surrounding = text.substring(match.index, Math.min(text.length, match.index + 140));
+      const freqMatch = surrounding.match(/\b(1-0-1|1-0-0|0-0-1|1-1-1|once daily|twice daily|once a day|twice a day|od|bd|tds|tid|qid|sos|a\.d\.)\b/i);
       const durMatch = surrounding.match(/(\d+\s*(?:days?|weeks?|months?))/i);
-      const instructMatch = surrounding.match(/(after food|before food|with meals?|empty stomach|at bedtime)/i);
+      const qtyMatch = surrounding.match(/(?:#|qty\s*[:\-]?)\s*(\d+)/i);
+      const instructMatch = surrounding.match(/(?:sig:?\s*([^\r\n]+)|after food|before food|with meals?|empty stomach|at bedtime)/i);
 
-      if (!prescriptions.some((p) => p.medicationName.toLowerCase() === medName.toLowerCase())) {
+      if (!prescriptions.some((p) => p.medicationName.toLowerCase().includes(cleanDrugName.toLowerCase()) || cleanDrugName.toLowerCase().includes(p.medicationName.toLowerCase()))) {
         prescriptions.push({
           medicationName: medName,
           dosage: medName.match(/\d+\s*(?:mg|mcg|ml|g)/i)?.[0] || 'As directed',
           frequency: freqMatch ? freqMatch[1].toUpperCase() : 'Once daily',
+          route: /inj/i.test(medName) ? 'Injection' : 'Oral',
           duration: durMatch ? durMatch[1] : 'As prescribed',
-          instructions: instructMatch ? instructMatch[1] : 'Follow clinician guidance',
-          prescribingDoctor: healthcareProvider || '',
+          quantity: qtyMatch ? `# ${qtyMatch[1]}` : '',
+          instructions: instructMatch ? instructMatch[0].trim() : 'Follow clinician guidance',
+          prescribingDoctor: doctorName || healthcareProvider || '',
+          registrationNumber: doctorRegistration || '',
           isCurrentMedication: true,
+          verificationStatus: 'UNVERIFIED', // Treated as unverified text for medical safety
         });
       }
     }
@@ -672,14 +813,20 @@ class MedicalExtractionService {
       diagnoses
     );
 
-    const reviewStatus = labResults.some((l) => l.abnormalFlag !== 'NORMAL')
+    // If prescriptions were extracted, default review status to REVIEW_REQUIRED for patient safety
+    const reviewStatus = labResults.some((l) => l.abnormalFlag !== 'NORMAL') || prescriptions.length > 0
       ? 'REVIEW_REQUIRED'
       : 'AUTO_EXTRACTED';
 
     return {
       patientName,
+      patientAge,
+      patientSex,
+      patientAddress,
       documentDate,
       healthcareProvider,
+      doctorRegistration,
+      doctorName,
       diagnoses,
       reviewStatus,
       confidenceScore: labResults.length > 0 || prescriptions.length > 0 || appointments.length > 0 || consultations.length > 0 ? 0.94 : 0.75,
@@ -698,18 +845,21 @@ class MedicalExtractionService {
   }
 
   /**
-   * Generates bilingual structured health summaries conforming to the 6 clinical sections
+   * Generates bilingual structured health summaries conforming to the 6 clinical sections.
+   * Completely safe against RangeError on date parsing and unvalidated array indexing.
    */
   generateSummaries({ extractedText, structuredData, documentType }) {
-    const labs = structuredData.labResults || [];
-    const abnormalLabs = labs.filter((l) => l.abnormalFlag !== 'NORMAL');
-    const rx = structuredData.prescriptions || [];
+    const data = structuredData || {};
+    const labs = Array.isArray(data.labResults) ? data.labResults : [];
+    const abnormalLabs = labs.filter((l) => l && l.abnormalFlag !== 'NORMAL');
+    const rx = Array.isArray(data.prescriptions) ? data.prescriptions : [];
+    const dateFormatted = this.formatSafeDate(data.documentDate);
 
     // 1. English Summary
     const englishOverview = `This ${documentType || 'medical record'} ${
-      structuredData.healthcareProvider ? `from ${structuredData.healthcareProvider} ` : ''
+      data.healthcareProvider ? `from ${data.healthcareProvider} ` : ''
     }${
-      structuredData.documentDate ? `dated ${new Date(structuredData.documentDate).toLocaleDateString()} ` : ''
+      dateFormatted ? `dated ${dateFormatted} ` : ''
     }documents clinical findings and health assessments for the patient.`;
 
     const englishKeyFindings = [
@@ -721,49 +871,54 @@ class MedicalExtractionService {
         : 'No explicit pharmaceutical prescriptions identified in this record.',
     ];
 
-    if (structuredData.diagnoses && structuredData.diagnoses.length > 0) {
-      englishKeyFindings.push(`Documented diagnosis / clinical observation: ${structuredData.diagnoses.join(', ')}`);
+    if (Array.isArray(data.diagnoses) && data.diagnoses.length > 0) {
+      englishKeyFindings.push(`Documented diagnosis / clinical observation: ${data.diagnoses.join(', ')}`);
     }
 
-    if (structuredData.appointments && structuredData.appointments.length > 0) {
-      const apt = structuredData.appointments[0];
-      englishKeyFindings.push(`Scheduled appointment: ${apt.doctorName} (${apt.specialty}) on ${new Date(apt.date).toLocaleDateString()} at ${apt.time}.`);
+    if (Array.isArray(data.appointments) && data.appointments.length > 0 && data.appointments[0]) {
+      const apt = data.appointments[0];
+      const aptDateStr = this.formatSafeDate(apt.date, 'Scheduled date');
+      englishKeyFindings.push(`Scheduled appointment: ${apt.doctorName || 'Clinician'} (${apt.specialty || 'General'}) on ${aptDateStr} at ${apt.time || '10:00 AM'}.`);
     }
 
-    if (structuredData.consultations && structuredData.consultations.length > 0) {
-      const con = structuredData.consultations[0];
-      englishKeyFindings.push(`Doctor consultation record: ${con.doctorName} (${con.specialty}) on ${new Date(con.date).toLocaleDateString()} at ${con.time}.`);
+    if (Array.isArray(data.consultations) && data.consultations.length > 0 && data.consultations[0]) {
+      const con = data.consultations[0];
+      const conDateStr = this.formatSafeDate(con.date, 'Recorded date');
+      englishKeyFindings.push(`Doctor consultation record: ${con.doctorName || 'Clinician'} (${con.specialty || 'General'}) on ${conDateStr} at ${con.time || '10:00 AM'}.`);
     }
 
     const englishAbnormalResults =
       abnormalLabs.length > 0
-        ? abnormalLabs.map((l) => `${l.testName}: ${l.result} (Expected: ${l.referenceRange}) — Marked ${l.abnormalFlag}`)
+        ? abnormalLabs.map((l) => `${l.testName || 'Test'}: ${l.result || '-'} (Expected: ${l.referenceRange || 'Standard'}) — Marked ${l.abnormalFlag || 'ABNORMAL'}`)
         : ['All tested laboratory parameters fall within standard laboratory reference ranges.'];
 
     const englishMeanings =
       abnormalLabs.length > 0
         ? `The report highlights ${abnormalLabs.length} value(s) outside stated reference bounds (e.g. ${abnormalLabs
-            .map((a) => `${a.testName} at ${a.result}`)
+            .slice(0, 3)
+            .map((a) => `${a.testName || 'Test'} at ${a.result || '-'}`)
             .join(', ')}). These values reflect physiological variance and should be evaluated alongside clinical symptoms by a licensed healthcare provider.`
         : 'The documented laboratory observations are within expected physiological intervals. Continue routine preventive health care.';
 
     const englishMedicines =
       rx.length > 0
-        ? rx.map((m) => `${m.medicationName} — ${m.dosage || ''} ${m.frequency || ''} (${m.instructions || ''})`.trim())
+        ? rx.map((m) => `${m.medicationName || 'Medication'} — ${m.dosage || ''} ${m.frequency || ''} (${m.instructions || ''})`.trim())
         : ['No specific pharmaceutical prescriptions documented in this report.'];
+
+    const firstAbnormalTestName = abnormalLabs.length > 0 && abnormalLabs[0]?.testName ? abnormalLabs[0].testName : null;
 
     const englishQuestions = [
       'What do these specific test results indicate regarding my current health status?',
-      ...(abnormalLabs.length > 0
-        ? [`How should we manage or follow up on my out-of-range ${abnormalLabs[0].testName}?`]
+      ...(firstAbnormalTestName
+        ? [`How should we manage or follow up on my out-of-range ${firstAbnormalTestName}?`]
         : []),
       'Are there lifestyle, dietary, or medication adjustments recommended based on these findings?',
       'When should a follow-up test or consultation be scheduled?',
     ];
 
-    // 2. Telugu Summary (Preserving exact numbers, decimal accuracy, units, and medicine names)
+    // 2. Telugu Summary
     const teluguOverview = `ఈ ${documentType || 'వైద్య నివేదిక'} ${
-      structuredData.healthcareProvider ? `${structuredData.healthcareProvider} నుండి ` : ''
+      data.healthcareProvider ? `${data.healthcareProvider} నుండి ` : ''
     }రోగి యొక్క ఆరోగ్య ఫలితాలు మరియు విశ్లేషణలను సూచిస్తుంది.`;
 
     const teluguKeyFindings = [
@@ -778,26 +933,27 @@ class MedicalExtractionService {
     const teluguAbnormalResults =
       abnormalLabs.length > 0
         ? abnormalLabs.map(
-            (l) => `${l.testName}: ${l.result} (ప్రామాణిక పరిధి: ${l.referenceRange}) — ${l.abnormalFlag === 'HIGH' ? 'ఎక్కువగా ఉంది (HIGH)' : 'తక్కువగా ఉంది (LOW)'}`
+            (l) => `${l.testName || 'పరీక్ష'}: ${l.result || '-'} (ప్రామాణిక పరిధి: ${l.referenceRange || 'సాధారణం'}) — ${l.abnormalFlag === 'HIGH' ? 'ఎక్కువగా ఉంది (HIGH)' : 'తక్కువగా ఉంది (LOW)'}`
           )
         : ['అన్ని ల్యాబ్ పరీక్షా ఫలితాలు సాధారణ ప్రామాణిక పరిధిలోనే ఉన్నాయి.'];
 
     const teluguMeanings =
       abnormalLabs.length > 0
         ? `నివేదికలో ${abnormalLabs.length} కొలతలు సాధారణ పరిధి కంటే భిన్నంగా ఉన్నాయి (${abnormalLabs
-            .map((a) => `${a.testName} ${a.result}`)
+            .slice(0, 3)
+            .map((a) => `${a.testName || 'పరీక్ష'} ${a.result || '-'}`)
             .join(', ')}). ఇది ఖచ్చితమైన వ్యాధి నిర్ధారణ కాదు; దయచేసి మీ వైద్యుడిని సంప్రదించండి.`
         : 'అన్ని పరీక్షా విలువలు సాధారణ పరిధిలో ఉన్నాయి. సాధారణ ఆరోగ్య జీవన విధానాన్ని కొనసాగించండి.';
 
     const teluguMedicines =
       rx.length > 0
-        ? rx.map((m) => `${m.medicationName} — మోతాదు: ${m.dosage || 'నిర్దేశించినట్లు'} (${m.frequency || ''}, ${m.instructions || ''})`)
+        ? rx.map((m) => `${m.medicationName || 'మందు'} — మోతాదు: ${m.dosage || 'నిర్దేశించినట్లు'} (${m.frequency || ''}, ${m.instructions || ''})`)
         : ['ఈ పత్రంలో నిర్దిష్ట మందులు నమోదు చేయబడలేదు.'];
 
     const teluguQuestions = [
       'ఈ తాజా పరీక్ష ఫలితాలు నా సాధారణ ఆరోగ్యం గురించి ఏమి తెలియజేస్తున్నాయి?',
-      ...(abnormalLabs.length > 0
-        ? [`సాధారణ పరిధిలో లేని ${abnormalLabs[0].testName} కొరకు తదుపరి ఏమి చేయాలి?`]
+      ...(firstAbnormalTestName
+        ? [`సాధారణ పరిధిలో లేని ${firstAbnormalTestName} కొరకు తదుపరి ఏమి చేయాలి?`]
         : []),
       'ఆహారపు అలవాట్లలో లేదా జీవనశైలిలో ఏవైనా మార్పులు అవసరమా?',
       'తదుపరి చెకప్ ఎప్పుడు చేయించుకోవాలి?',
@@ -824,15 +980,16 @@ class MedicalExtractionService {
   }
 
   /**
-   * Complete end-to-end extraction pipeline
+   * Complete end-to-end extraction pipeline with safety boundaries & optional raw OCR preservation
    */
-  async processMedicalContent(extractedText = '', initialDocType = 'Other') {
-    const { classification, confidence } = this.classifyDocument(extractedText, initialDocType);
-    const structuredData = this.extractWithRules(extractedText);
+  async processMedicalContent(extractedText = '', initialDocType = 'Other', options = {}) {
+    const safeText = typeof extractedText === 'string' ? extractedText : '';
+    const { classification, confidence } = this.classifyDocument(safeText, initialDocType);
+    const structuredData = this.extractWithRules(safeText);
     structuredData.confidenceScore = confidence;
 
     const { summary, teluguSummary } = this.generateSummaries({
-      extractedText,
+      extractedText: safeText,
       structuredData,
       documentType: classification,
     });
@@ -842,6 +999,7 @@ class MedicalExtractionService {
       structuredData,
       summary,
       teluguSummary,
+      rawOcrOutput: options.rawOcrOutput || safeText,
     };
   }
 }

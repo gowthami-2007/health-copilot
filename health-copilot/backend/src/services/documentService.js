@@ -115,11 +115,13 @@ class DocumentService {
 
       doc.extractedText = procResult.extractedText;
       doc.chunks = procResult.chunks;
+      doc.rawOcrOutput = procResult.extractedText || '';
 
       // 2. Structured Clinical Intelligence & Bilingual Health Summaries
       const extractionResult = await medicalExtractionService.processMedicalContent(
         procResult.extractedText,
-        doc.documentType
+        doc.documentType,
+        { imagePath: physicalPath, rawOcrOutput: procResult.extractedText }
       );
 
       if (doc.documentType === 'Other' && extractionResult.classifiedType) {
@@ -134,14 +136,14 @@ class DocumentService {
 
       // 3. Automatically synchronize extracted Appointments & Doctor Consultations
       const Appointment = require('../models/Appointment');
-      const extractedApts = doc.structuredData.appointments || [];
-      const extractedCons = doc.structuredData.consultations || [];
+      const extractedApts = Array.isArray(doc.structuredData.appointments) ? doc.structuredData.appointments : [];
+      const extractedCons = Array.isArray(doc.structuredData.consultations) ? doc.structuredData.consultations : [];
 
       // Process extracted scheduled appointments
       for (const item of extractedApts) {
-        if (item.doctorName && item.date) {
+        if (item && item.doctorName && item.date) {
           const aptDate = new Date(item.date);
-          if (!isNaN(aptDate.getTime())) {
+          if (!isNaN(aptDate.getTime()) && aptDate.getFullYear() >= 1900 && aptDate.getFullYear() <= 2100) {
             const existing = await Appointment.findOne({
               userId,
               doctorName: item.doctorName.trim(),
@@ -186,9 +188,9 @@ class DocumentService {
 
       // Process extracted doctor consultations
       for (const item of extractedCons) {
-        if (item.doctorName && item.date) {
+        if (item && item.doctorName && item.date) {
           const conDate = new Date(item.date);
-          if (!isNaN(conDate.getTime())) {
+          if (!isNaN(conDate.getTime()) && conDate.getFullYear() >= 1900 && conDate.getFullYear() <= 2100) {
             const existing = await Appointment.findOne({
               userId,
               doctorName: item.doctorName.trim(),
@@ -240,12 +242,16 @@ class DocumentService {
       if (extractedApts.length) countsDesc.push(`${extractedApts.length} appointment(s)`);
       if (extractedCons.length) countsDesc.push(`${extractedCons.length} consultation(s)`);
 
+      const safeTimelineDate = (doc.structuredData?.documentDate && !isNaN(new Date(doc.structuredData.documentDate).getTime()))
+        ? new Date(doc.structuredData.documentDate)
+        : doc.createdAt;
+
       await Timeline.create({
         userId,
         eventType: 'DOCUMENT',
         title: `Uploaded ${doc.documentType}`,
         description: `Analyzed "${doc.fileName}". ${countsDesc.length > 0 ? countsDesc.join(', ') + ' extracted.' : 'Clinical documentation processed.'}`,
-        date: doc.structuredData?.documentDate || doc.createdAt,
+        date: safeTimelineDate,
         referenceId: doc._id,
         metadata: {
           documentId: doc._id,
@@ -282,8 +288,26 @@ class DocumentService {
     if (updateData.diagnoses) {
       doc.structuredData.diagnoses = updateData.diagnoses;
     }
+    if (updateData.patientName !== undefined) {
+      doc.structuredData.patientName = updateData.patientName;
+    }
+    if (updateData.patientAge !== undefined) {
+      doc.structuredData.patientAge = updateData.patientAge;
+    }
+    if (updateData.patientSex !== undefined) {
+      doc.structuredData.patientSex = updateData.patientSex;
+    }
+    if (updateData.patientAddress !== undefined) {
+      doc.structuredData.patientAddress = updateData.patientAddress;
+    }
+    if (updateData.doctorRegistration !== undefined) {
+      doc.structuredData.doctorRegistration = updateData.doctorRegistration;
+    }
     if (updateData.documentDate) {
-      doc.structuredData.documentDate = new Date(updateData.documentDate);
+      const parsedD = new Date(updateData.documentDate);
+      if (!isNaN(parsedD.getTime())) {
+        doc.structuredData.documentDate = parsedD;
+      }
     }
     if (updateData.healthcareProvider !== undefined) {
       doc.structuredData.healthcareProvider = updateData.healthcareProvider;

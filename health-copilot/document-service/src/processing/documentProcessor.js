@@ -3,8 +3,8 @@ const { extractText } = require('../extraction/textExtractor');
 const { createChunks } = require('../chunking/chunkService');
 
 const processDocumentFile = async (filePath, mimetype, fileSize) => {
-  // 1. Validate file format and size
-  const validation = validateFile({ mimetype, size: fileSize, originalname: filePath });
+  // 1. Validate file format, size, and binary signature
+  const validation = validateFile({ mimetype, size: fileSize, originalname: filePath, path: filePath });
   if (!validation.isValid) {
     return {
       success: false,
@@ -18,12 +18,13 @@ const processDocumentFile = async (filePath, mimetype, fileSize) => {
   try {
     const extractionResult = await extractText(filePath, mimetype);
 
-    if (!extractionResult.hasText) {
+    if (!extractionResult || !extractionResult.hasText) {
       return {
         success: false,
-        error: extractionResult.message || "We couldn't extract readable text from this document.",
-        extractedText: '',
+        error: (extractionResult && extractionResult.message) || "We couldn't extract readable text from this document.",
+        extractedText: extractionResult ? extractionResult.text || '' : '',
         chunks: [],
+        confidence: extractionResult ? extractionResult.confidence || 0 : 0,
       };
     }
 
@@ -34,6 +35,11 @@ const processDocumentFile = async (filePath, mimetype, fileSize) => {
       success: true,
       error: null,
       extractedText: extractionResult.text,
+      confidence: extractionResult.confidence || 0,
+      isImage: Boolean(extractionResult.isImage),
+      isHandwrittenCandidate: Boolean(extractionResult.isHandwrittenCandidate),
+      words: Array.isArray(extractionResult.words) ? extractionResult.words : [],
+      lines: Array.isArray(extractionResult.lines) ? extractionResult.lines : [],
       chunks,
     };
   } catch (error) {

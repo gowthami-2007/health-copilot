@@ -167,6 +167,36 @@ const DocumentDetails = () => {
         </div>
       </div>
 
+      {document.status === 'FAILED' && (
+        <div style={{
+          padding: '1rem 1.25rem',
+          backgroundColor: '#fff1f2',
+          border: '1px solid #fecdd3',
+          borderRadius: 'var(--radius-lg)',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertTriangle size={22} color="#e11d48" />
+            <div>
+              <h5 style={{ margin: 0, color: '#9f1239', fontSize: '0.95rem', fontWeight: 700 }}>
+                Automatic Text Extraction Could Not Complete
+              </h5>
+              <p style={{ margin: '0.2rem 0 0 0', color: '#be123c', fontSize: '0.825rem' }}>
+                {document.failureReason || "We couldn't extract readable text from this document image."} You can inspect the original preview and enter clinical fields manually.
+              </p>
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleReprocess} isLoading={isProcessing} icon={RefreshCw}>
+            Retry OCR Analysis
+          </Button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div style={{
         display: 'flex',

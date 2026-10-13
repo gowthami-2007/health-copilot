@@ -38,6 +38,10 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    rawOcrOutput: {
+      type: String,
+      default: '',
+    },
     summary: {
       overview: { type: String, default: '' },
       keyFindings: [{ type: String }],
@@ -61,8 +65,12 @@ const documentSchema = new mongoose.Schema(
     },
     structuredData: {
       patientName: { type: String, default: '' },
+      patientAge: { type: Number, default: null },
+      patientSex: { type: String, default: '' },
+      patientAddress: { type: String, default: '' },
       documentDate: { type: Date, default: null },
       healthcareProvider: { type: String, default: '' },
+      doctorRegistration: { type: String, default: '' },
       diagnoses: [{ type: String }],
       reviewStatus: {
         type: String,
@@ -90,10 +98,14 @@ const documentSchema = new mongoose.Schema(
           medicationName: { type: String, required: true },
           dosage: { type: String, default: '' },
           frequency: { type: String, default: '' },
+          route: { type: String, default: 'Oral' },
           duration: { type: String, default: '' },
+          quantity: { type: String, default: '' },
           instructions: { type: String, default: '' },
           prescribingDoctor: { type: String, default: '' },
+          registrationNumber: { type: String, default: '' },
           isCurrentMedication: { type: Boolean, default: false },
+          verificationStatus: { type: String, default: 'UNVERIFIED' },
         },
       ],
       dischargeSummary: {
