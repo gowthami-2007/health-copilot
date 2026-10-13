@@ -1,8 +1,11 @@
 import React from 'react';
 import TimelineItem from './TimelineItem';
 import { Clock } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const Timeline = ({ events = [], groupedByYear = {} }) => {
+  const { t } = useLanguage();
+
   if (events.length === 0) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
@@ -20,10 +23,10 @@ const Timeline = ({ events = [], groupedByYear = {} }) => {
           <Clock size={32} />
         </div>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
-          Your Health Timeline is Empty
+          {t('timeline.noEvents', 'Your Health Timeline is Empty')}
         </h3>
         <p style={{ maxWidth: '420px', margin: '0 auto 1.5rem auto', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Uploading medical reports, adding prescriptions, and scheduling consultations will automatically generate your chronological healthcare journey.
+          {t('timeline.subtitle', 'Uploading medical reports, adding prescriptions, and scheduling consultations will automatically generate your chronological healthcare journey.')}
         </p>
       </div>
     );

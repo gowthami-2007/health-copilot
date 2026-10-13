@@ -1,18 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, ArrowRight, UploadCloud, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 const RecentDocuments = ({ documents = [] }) => {
+  const { t, isTelugu } = useLanguage();
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PROCESSED':
-        return <span className="badge badge-success"><CheckCircle2 size={12} /> Summarized</span>;
+        return <span className="badge badge-success"><CheckCircle2 size={12} /> {isTelugu ? 'సారాంశం సిద్ధం' : 'Summarized'}</span>;
       case 'PROCESSING':
-        return <span className="badge badge-warning"><Clock size={12} /> Processing</span>;
+        return <span className="badge badge-warning"><Clock size={12} /> {isTelugu ? 'విశ్లేషిస్తోంది...' : 'Processing'}</span>;
       case 'FAILED':
-        return <span className="badge badge-danger"><AlertTriangle size={12} /> Unreadable</span>;
+        return <span className="badge badge-danger"><AlertTriangle size={12} /> {isTelugu ? 'చదవలేకపోయాము' : 'Unreadable'}</span>;
       default:
-        return <span className="badge badge-neutral"><Clock size={12} /> Uploaded</span>;
+        return <span className="badge badge-neutral"><Clock size={12} /> {isTelugu ? 'అప్‌లోడ్ అయ్యింది' : 'Uploaded'}</span>;
     }
   };
 
@@ -28,10 +31,10 @@ const RecentDocuments = ({ documents = [] }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <FileText size={20} color="var(--primary)" />
-          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Recent Health Documents</h3>
+          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>{t('dashboard.recentDocuments', 'Recent Health Documents')}</h3>
         </div>
         <Link to="/documents" style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          View all <ArrowRight size={14} />
+          {t('dashboard.viewAll', 'View all')} <ArrowRight size={14} />
         </Link>
       </div>
 
@@ -50,13 +53,13 @@ const RecentDocuments = ({ documents = [] }) => {
         }}>
           <UploadCloud size={36} color="var(--text-subtle)" style={{ marginBottom: '0.75rem' }} />
           <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-            No documents uploaded yet
+            {isTelugu ? 'ఇంకా డాక్యుమెంట్లు అప్‌లోడ్ కాలేదు' : 'No documents uploaded yet'}
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Upload blood reports, prescriptions, or doctor notes to get AI summaries
+            {isTelugu ? 'AI సారాంశాలు పొందడానికి రక్త పరీక్ష నివేదికలు లేదా ప్రిస్క్రిప్షన్లను అప్‌లోడ్ చేయండి' : 'Upload blood reports, prescriptions, or doctor notes to get AI summaries'}
           </p>
           <Link to="/documents" className="btn btn-primary btn-sm">
-            Upload First Document
+            {isTelugu ? 'మొదటి పత్రాన్ని అప్‌లోడ్ చేయండి' : 'Upload First Document'}
           </Link>
         </div>
       ) : (

@@ -8,6 +8,7 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Button from '../components/common/Button';
 import documentService from '../services/documentService';
+import { useLanguage } from '../hooks/useLanguage';
 import {
   ArrowLeft,
   Calendar,
@@ -24,6 +25,7 @@ import {
 const DocumentDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, language } = useLanguage();
 
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ const DocumentDetails = () => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this document permanently?')) {
+    if (!window.confirm(t('documents.deleteConfirm', 'Are you sure you want to delete this document permanently?'))) {
       return;
     }
     try {
@@ -76,31 +78,31 @@ const DocumentDetails = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PROCESSED':
-        return <span className="badge badge-success"><CheckCircle2 size={13} /> Processed & Summarized</span>;
+        return <span className="badge badge-success"><CheckCircle2 size={13} /> {t('documents.statusProcessed', 'Processed & Summarized')}</span>;
       case 'PROCESSING':
-        return <span className="badge badge-warning"><Clock size={13} /> Processing...</span>;
+        return <span className="badge badge-warning"><Clock size={13} /> {t('documents.statusProcessing', 'Processing...')}</span>;
       case 'FAILED':
-        return <span className="badge badge-danger"><AlertTriangle size={13} /> Extraction Failed</span>;
+        return <span className="badge badge-danger"><AlertTriangle size={13} /> {t('documents.statusFailed', 'Extraction Failed')}</span>;
       default:
-        return <span className="badge badge-neutral"><Clock size={13} /> Uploaded</span>;
+        return <span className="badge badge-neutral"><Clock size={13} /> {t('documents.statusPending', 'Uploaded')}</span>;
     }
   };
 
   if (loading) {
     return (
-      <Layout pageTitle="Document Details">
-        <Loader message="Loading document analysis..." />
+      <Layout pageTitle={t('documentDetails.pageTitle', 'Document Details')}>
+        <Loader message={t('common.loading', 'Loading document analysis...')} />
       </Layout>
     );
   }
 
   if (error || !document) {
     return (
-      <Layout pageTitle="Document Details">
+      <Layout pageTitle={t('documentDetails.pageTitle', 'Document Details')}>
         <div style={{ maxWidth: '600px', margin: '2rem auto', textAlign: 'center' }}>
           <ErrorMessage message={error || 'Document not found'} />
           <Button variant="secondary" onClick={() => navigate('/documents')} icon={ArrowLeft}>
-            Back to Documents
+            {t('documentDetails.backToDocs', 'Back to Documents')}
           </Button>
         </div>
       </Layout>
@@ -108,7 +110,7 @@ const DocumentDetails = () => {
   }
 
   return (
-    <Layout pageTitle="Document Intelligence">
+    <Layout pageTitle={t('documentDetails.pageTitle', 'Document Intelligence')}>
       {/* Top Breadcrumb & Controls */}
       <div style={{
         display: 'flex',
@@ -123,7 +125,7 @@ const DocumentDetails = () => {
             to="/documents"
             className="btn btn-secondary btn-sm"
             style={{ padding: '0.4rem 0.6rem' }}
-            title="Back to list"
+            title={t('documentDetails.backToDocs', 'Back to list')}
           >
             <ArrowLeft size={16} />
           </Link>
@@ -135,7 +137,7 @@ const DocumentDetails = () => {
               <span className="badge badge-primary">{document.documentType}</span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Calendar size={13} />
-                Uploaded {new Date(document.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                {new Date(document.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
               {getStatusBadge(document.status)}
             </div>
@@ -149,18 +151,18 @@ const DocumentDetails = () => {
             onClick={handleReprocess}
             isLoading={isProcessing}
             icon={RefreshCw}
-            title="Re-run AI Analysis"
+            title={t('documentDetails.reanalyze', 'Re-run AI Analysis')}
           >
-            Re-analyze
+            {t('documentDetails.reanalyze', 'Re-analyze')}
           </Button>
           <Button
             variant="danger"
             size="sm"
             onClick={handleDelete}
             icon={Trash2}
-            title="Delete Document"
+            title={t('documentDetails.deleteDoc', 'Delete Document')}
           >
-            Delete
+            {t('common.delete', 'Delete')}
           </Button>
         </div>
       </div>
@@ -189,7 +191,7 @@ const DocumentDetails = () => {
             gap: '0.4rem'
           }}
         >
-          <Bot size={16} /> AI Summary & Insights
+          <Bot size={16} /> {t('documentDetails.tabSummary', 'AI Summary & Insights')}
         </button>
 
         <button
@@ -209,7 +211,7 @@ const DocumentDetails = () => {
             gap: '0.4rem'
           }}
         >
-          <CheckCircle2 size={16} /> Verified Lab Values & Rx
+          <CheckCircle2 size={16} /> {t('documentDetails.tabStructured', 'Verified Lab Values & Rx')}
         </button>
 
         <button
@@ -229,7 +231,7 @@ const DocumentDetails = () => {
             gap: '0.4rem'
           }}
         >
-          <FileText size={16} /> Original Document Preview
+          <FileText size={16} /> {t('documentDetails.tabPreview', 'Original Document Preview')}
         </button>
 
         <button
@@ -249,7 +251,7 @@ const DocumentDetails = () => {
             gap: '0.4rem'
           }}
         >
-          <Layers size={16} /> Extracted Raw Text
+          <Layers size={16} /> {t('documentDetails.tabExtracted', 'Extracted Raw Text')}
         </button>
       </div>
 
@@ -260,7 +262,7 @@ const DocumentDetails = () => {
             <DocumentSummary
               summary={document.summary}
               teluguSummary={document.teluguSummary}
-              preferredLanguage="en"
+              preferredLanguage={language}
             />
           </div>
 

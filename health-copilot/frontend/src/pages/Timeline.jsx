@@ -4,9 +4,11 @@ import Timeline from '../components/timeline/Timeline';
 import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import timelineService from '../services/timelineService';
+import { useLanguage } from '../hooks/useLanguage';
 import { Clock, Filter } from 'lucide-react';
 
 const TimelinePage = () => {
+  const { t } = useLanguage();
   const [timelineData, setTimelineData] = useState({ events: [], groupedByYear: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,8 +46,15 @@ const TimelinePage = () => {
     filteredGrouped[year].push(event);
   }
 
+  const filterOptions = [
+    { id: 'ALL', label: t('timeline.allFilter', 'All Events') },
+    { id: 'DOCUMENT', label: t('timeline.documentsFilter', 'Documents') },
+    { id: 'APPOINTMENT', label: t('timeline.appointmentsFilter', 'Appointments') },
+    { id: 'MEDICATION', label: t('timeline.medicationsFilter', 'Medications') },
+  ];
+
   return (
-    <Layout pageTitle="Chronological Health Timeline">
+    <Layout pageTitle={t('timeline.pageTitle', 'Chronological Health Timeline')}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -56,32 +65,32 @@ const TimelinePage = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-            Health Journey Timeline
+            {t('timeline.pageTitle', 'Health Journey Timeline')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            A unified chronological history of clinical documents, appointments, and medication milestones.
+            {t('timeline.subtitle', 'A unified chronological history of clinical documents, appointments, and medication milestones.')}
           </p>
         </div>
 
         {/* Filter Pills */}
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          {['ALL', 'DOCUMENT', 'APPOINTMENT', 'MEDICATION'].map((type) => (
+          {filterOptions.map((opt) => (
             <button
-              key={type}
+              key={opt.id}
               type="button"
-              onClick={() => setFilterType(type)}
+              onClick={() => setFilterType(opt.id)}
               style={{
                 padding: '0.4rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
-                border: `1px solid ${filterType === type ? 'var(--primary)' : 'var(--border-light)'}`,
-                backgroundColor: filterType === type ? 'var(--primary)' : '#ffffff',
-                color: filterType === type ? '#ffffff' : 'var(--text-muted)',
+                border: `1px solid ${filterType === opt.id ? 'var(--primary)' : 'var(--border-light)'}`,
+                backgroundColor: filterType === opt.id ? 'var(--primary)' : '#ffffff',
+                color: filterType === opt.id ? '#ffffff' : 'var(--text-muted)',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              {type === 'ALL' ? 'All Events' : `${type.charAt(0) + type.slice(1).toLowerCase()}s`}
+              {opt.label}
             </button>
           ))}
         </div>
@@ -90,7 +99,7 @@ const TimelinePage = () => {
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
       {loading ? (
-        <Loader message="Compiling chronological records..." />
+        <Loader message={t('common.loading', 'Compiling chronological records...')} />
       ) : (
         <Timeline events={filteredEvents} groupedByYear={filteredGrouped} />
       )}

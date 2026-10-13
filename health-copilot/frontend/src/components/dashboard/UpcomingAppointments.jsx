@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ArrowRight, UserCheck, Clock, MapPin } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 const UpcomingAppointments = ({ appointments = [] }) => {
+  const { t, isTelugu } = useLanguage();
+
   return (
     <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{
@@ -15,10 +18,10 @@ const UpcomingAppointments = ({ appointments = [] }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Calendar size={20} color="var(--accent)" />
-          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Upcoming Appointments</h3>
+          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>{t('dashboard.upcomingAppointmentsTitle', 'Upcoming Appointments')}</h3>
         </div>
         <Link to="/appointments" style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          Manage <ArrowRight size={14} />
+          {isTelugu ? 'నిర్వహించండి' : 'Manage'} <ArrowRight size={14} />
         </Link>
       </div>
 
@@ -37,13 +40,13 @@ const UpcomingAppointments = ({ appointments = [] }) => {
         }}>
           <Calendar size={36} color="var(--text-subtle)" style={{ marginBottom: '0.75rem' }} />
           <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-            No upcoming appointments
+            {isTelugu ? 'రాబోయే అపాయింట్‌మెంట్లు ఏవీ లేవు' : 'No upcoming appointments'}
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Keep track of doctor consultations and clinical follow-ups
+            {isTelugu ? 'వైద్యుల సంప్రదింపులు మరియు ఫాలో-అప్‌లను ట్రాక్ చేయండి' : 'Keep track of doctor consultations and clinical follow-ups'}
           </p>
           <Link to="/appointments" className="btn btn-secondary btn-sm">
-            Schedule Appointment
+            {isTelugu ? 'అపాయింట్‌మెంట్ బుక్ చేయండి' : 'Schedule Appointment'}
           </Link>
         </div>
       ) : (

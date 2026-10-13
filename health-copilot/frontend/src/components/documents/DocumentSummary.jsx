@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   HelpCircle,
@@ -13,9 +13,19 @@ import {
   FileText,
   Info,
 } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
-const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage = 'en' }) => {
-  const [currentLang, setCurrentLang] = useState(preferredLanguage || 'en');
+const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage }) => {
+  const { language } = useLanguage();
+  const [currentLang, setCurrentLang] = useState(preferredLanguage || language || 'en');
+
+  useEffect(() => {
+    if (preferredLanguage) {
+      setCurrentLang(preferredLanguage);
+    } else if (language) {
+      setCurrentLang(language);
+    }
+  }, [preferredLanguage, language]);
 
   // Select active summary payload
   const activeSummary = currentLang === 'te' && teluguSummary?.overview

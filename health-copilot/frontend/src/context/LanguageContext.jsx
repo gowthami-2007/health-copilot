@@ -1,0 +1,83 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import translations from '../locales/translations';
+import useAuth from '../hooks/useAuth';
+
+export const LanguageContext = createContext(null);
+
+export const LanguageProvider = ({ children }) => {
+  const { user } = useAuth();
+
+  const [language, setLanguageState] = useState(() => {
+    // Priority: stored in localStorage, or user preferredLanguage, or default 'en'
+    const stored = localStorage.getItem('health_copilot_language');
+    if (stored === 'te' || stored === 'en') return stored;
+    if (user?.preferredLanguage === 'te' || user?.preferredLanguage === 'en') {
+      return user.preferredLanguage;
+    }
+    return 'en';
+  });
+
+  // Whenever user profile updates or loads, synchronize language
+  useEffect(() => {
+    if (user?.preferredLanguage && (user.preferredLanguage === 'te' || user.preferredLanguage === 'en')) {
+      setLanguageState(user.preferredLanguage);
+      localStorage.setItem('health_copilot_language', user.preferredLanguage);
+      document.documentElement.lang = user.preferredLanguage;
+    }
+  }, [user?.preferredLanguage]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  const setLanguage = useCallback((lang) => {
+    const validLang = lang === 'te' ? 'te' : 'en';
+    setLanguageState(validLang);
+    localStorage.setItem('health_copilot_language', validLang);
+    document.documentElement.lang = validLang;
+  }, []);
+
+  /**
+   * Helper translation function supporting dot-notation keys:
+   * e.g. t('nav.dashboard') or t('assistant.thinking')
+   */
+  const t = useCallback(
+    (keyPath, fallback = '') => {
+      if (!keyPath) return fallback;
+      const keys = keyPath.split('.');
+      let current = translations[language] || translations.en;
+
+      for (const k of keys) {
+        if (current && typeof current === 'object' && k in current) {
+          current = current[k];
+        } else {
+          // Fallback to English dictionary
+          let enCurrent = translations.en;
+          for (const enK of keys) {
+            if (enCurrent && typeof enCurrent === 'object' && enK in enCurrent) {
+              enCurrent = enCurrent[enK];
+            } else {
+              return fallback || keyPath;
+            }
+          }
+          return enCurrent !== undefined ? enCurrent : (fallback || keyPath);
+        }
+      }
+
+      return current !== undefined ? current : (fallback || keyPath);
+    },
+    [language]
+  );
+
+  const value = {
+    language,
+    isTelugu: language === 'te',
+    setLanguage,
+    t,
+    translations: translations[language] || translations.en,
+  };
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+};
+
+export default LanguageContext;

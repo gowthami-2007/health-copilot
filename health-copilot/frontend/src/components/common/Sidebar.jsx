@@ -16,19 +16,21 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
+import useLanguage from '../../hooks/useLanguage';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { logout, user } = useAuth();
+  const { t } = useLanguage();
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'AI Assistant', path: '/assistant', icon: Bot, badge: 'AI' },
-    { name: 'Documents', path: '/documents', icon: FileText },
-    { name: 'Medications', path: '/medications', icon: Pill },
-    { name: 'Appointments', path: '/appointments', icon: Calendar },
-    { name: 'Consultations', path: '/consultations', icon: Stethoscope },
-    { name: 'Health Timeline', path: '/timeline', icon: Clock },
-    { name: 'Profile & Settings', path: '/profile', icon: User },
+    { name: t('nav.dashboard', 'Dashboard'), path: '/dashboard', icon: LayoutDashboard },
+    { name: t('nav.assistant', 'AI Assistant'), path: '/assistant', icon: Bot, badge: 'AI' },
+    { name: t('nav.documents', 'Documents'), path: '/documents', icon: FileText },
+    { name: t('nav.medications', 'Medications'), path: '/medications', icon: Pill },
+    { name: t('nav.appointments', 'Appointments'), path: '/appointments', icon: Calendar },
+    { name: t('nav.consultations', 'Consultations'), path: '/consultations', icon: Stethoscope },
+    { name: t('nav.timeline', 'Health Timeline'), path: '/timeline', icon: Clock },
+    { name: t('nav.profile', 'Profile & Settings'), path: '/profile', icon: User },
   ];
 
   return (
@@ -71,7 +73,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 Health<span style={{ color: 'var(--primary)' }}>Copilot</span>
               </span>
               <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                Personal Vault
+                {t('nav.brandSub', 'Personal Vault')}
               </span>
             </div>
           </div>
@@ -89,7 +91,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Navigation Links */}
         <nav style={{ padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '0 0.5rem 0.5rem 0.5rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Main Menu
+            {t('nav.mainMenu', 'Main Menu')}
           </div>
 
           {navItems.map((item) => {
@@ -178,7 +180,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={logout}
-              title="Sign Out"
+              title={t('nav.logout', 'Sign Out')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -191,7 +193,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               }}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-              aria-label="Sign out"
+              aria-label={t('nav.logout', 'Sign Out')}
             >
               <LogOut size={16} />
             </button>

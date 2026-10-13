@@ -7,7 +7,7 @@ const User = require('../models/User');
 class DashboardService {
   async getDashboardData(userId) {
     // 1. Fetch user profile for customized greeting
-    const user = await User.findById(userId).select('name email');
+    const user = await User.findById(userId).select('name email preferredLanguage');
 
     // 2. Fetch counts in parallel
     const [
@@ -76,11 +76,12 @@ class DashboardService {
 
     // Determine greeting
     const hour = new Date().getHours();
-    let greeting = 'Good morning';
+    const isTe = user?.preferredLanguage === 'te';
+    let greeting = isTe ? 'శుభోదయం' : 'Good morning';
     if (hour >= 12 && hour < 17) {
-      greeting = 'Good afternoon';
+      greeting = isTe ? 'శుభ మధ్యాహ్నం' : 'Good afternoon';
     } else if (hour >= 17) {
-      greeting = 'Good evening';
+      greeting = isTe ? 'శుభ సాయంత్రం' : 'Good evening';
     }
 
     return {

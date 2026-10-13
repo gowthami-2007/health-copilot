@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Pill, ArrowRight, Sun, Moon, Clock } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 const MedicationOverview = ({ medications = [] }) => {
+  const { t, isTelugu } = useLanguage();
+
   const getFrequencyIcon = (freq = '') => {
     const lower = freq.toLowerCase();
     if (lower.includes('morning')) return <Sun size={14} color="#f59e0b" />;
@@ -22,10 +25,10 @@ const MedicationOverview = ({ medications = [] }) => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Pill size={20} color="var(--secondary)" />
-          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Current Medications</h3>
+          <h3 style={{ fontSize: '1.15rem', margin: 0 }}>{t('dashboard.activeMedicationsTitle', 'Current Medications')}</h3>
         </div>
         <Link to="/medications" style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          View all <ArrowRight size={14} />
+          {t('dashboard.viewAll', 'View all')} <ArrowRight size={14} />
         </Link>
       </div>
 
@@ -44,13 +47,13 @@ const MedicationOverview = ({ medications = [] }) => {
         }}>
           <Pill size={36} color="var(--text-subtle)" style={{ marginBottom: '0.75rem' }} />
           <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-            No medications added yet
+            {isTelugu ? 'ఇంకా మందులు జోడించబడలేదు' : 'No medications added yet'}
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Organize active dosages, schedules, and physician instructions
+            {isTelugu ? 'మోతాదులు, షెడ్యూల్‌లు మరియు వైద్యుల సూచనలను నిర్వహించండి' : 'Organize active dosages, schedules, and physician instructions'}
           </p>
           <Link to="/medications" className="btn btn-secondary btn-sm">
-            Add Medication
+            {isTelugu ? 'కొత్త మందును జోడించండి' : 'Add Medication'}
           </Link>
         </div>
       ) : (

@@ -7,9 +7,11 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import medicationService from '../services/medicationService';
 import Button from '../components/common/Button';
+import { useLanguage } from '../hooks/useLanguage';
 import { Plus, Pill, ShieldAlert } from 'lucide-react';
 
 const Medications = () => {
+  const { t } = useLanguage();
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -60,7 +62,7 @@ const Medications = () => {
   };
 
   const handleDelete = async (medId) => {
-    if (!window.confirm('Delete this medication record?')) return;
+    if (!window.confirm(t('common.confirm', 'Delete this medication record?'))) return;
     try {
       await medicationService.deleteMedication(medId);
       setMedications((prev) => prev.filter((m) => m._id !== medId));
@@ -74,8 +76,15 @@ const Medications = () => {
     setIsModalOpen(true);
   };
 
+  const filterOptions = [
+    { key: 'ALL', label: t('common.all', 'ALL') },
+    { key: 'ACTIVE', label: t('common.active', 'ACTIVE') },
+    { key: 'PAUSED', label: 'PAUSED' },
+    { key: 'COMPLETED', label: t('common.completed', 'COMPLETED') },
+  ];
+
   return (
-    <Layout pageTitle="Medication Management">
+    <Layout pageTitle={t('medications.pageTitle', 'Medication Management')}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -86,15 +95,15 @@ const Medications = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-            Prescriptions & Medications
+            {t('medications.pageTitle', 'Prescriptions & Medications')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Track active dosages, schedules, and prescriber instructions.
+            {t('medications.subtitle', 'Track active dosages, schedules, and prescriber instructions.')}
           </p>
         </div>
 
         <Button id="open-add-med-btn" variant="primary" onClick={openAddModal} icon={Plus}>
-          Add Medication
+          {t('medications.addMedication', 'Add Medication')}
         </Button>
       </div>
 
@@ -102,29 +111,29 @@ const Medications = () => {
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {['ALL', 'ACTIVE', 'PAUSED', 'COMPLETED'].map((status) => (
+        {filterOptions.map((opt) => (
           <button
-            key={status}
+            key={opt.key}
             type="button"
-            onClick={() => setFilterStatus(status)}
+            onClick={() => setFilterStatus(opt.key)}
             style={{
               padding: '0.4rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              border: `1px solid ${filterStatus === status ? 'var(--primary)' : 'var(--border-light)'}`,
-              backgroundColor: filterStatus === status ? 'var(--primary)' : '#ffffff',
-              color: filterStatus === status ? '#ffffff' : 'var(--text-muted)',
+              border: `1px solid ${filterStatus === opt.key ? 'var(--primary)' : 'var(--border-light)'}`,
+              backgroundColor: filterStatus === opt.key ? 'var(--primary)' : '#ffffff',
+              color: filterStatus === opt.key ? '#ffffff' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
           >
-            {status}
+            {opt.label}
           </button>
         ))}
       </div>
 
       {loading && medications.length === 0 ? (
-        <Loader message="Loading medication records..." />
+        <Loader message={t('common.loading', 'Loading medication records...')} />
       ) : (
         <MedicationList
           medications={medications}
@@ -141,7 +150,7 @@ const Medications = () => {
           setIsModalOpen(false);
           setEditingMedication(null);
         }}
-        title={editingMedication ? 'Edit Medication' : 'Add New Medication'}
+        title={editingMedication ? t('common.edit', 'Edit Medication') : t('medications.addMedication', 'Add New Medication')}
       >
         <MedicationForm
           initialData={editingMedication}

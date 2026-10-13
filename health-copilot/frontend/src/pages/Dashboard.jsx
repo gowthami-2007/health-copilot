@@ -9,10 +9,12 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import dashboardService from '../services/dashboardService';
 import useAuth from '../hooks/useAuth';
+import useLanguage from '../hooks/useLanguage';
 import { Bot, ArrowRight, Sparkles, Activity, Plus } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t, isTelugu } = useLanguage();
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
@@ -44,8 +46,11 @@ const Dashboard = () => {
     navigate('/assistant', { state: { initialPrompt: quickQuestion.trim() } });
   };
 
+  // Determine localized greeting
+  const greeting = data?.greeting || (isTelugu ? 'నమస్కారం' : 'Good day');
+
   return (
-    <Layout pageTitle="Patient Health Overview">
+    <Layout pageTitle={t('dashboard.pageTitle', 'Patient Health Overview')}>
       {/* Greeting Banner */}
       <div style={{
         marginBottom: '2rem',
@@ -57,10 +62,10 @@ const Dashboard = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-            {data?.greeting || 'Good day'}, {user?.name || 'Patient'}
+            {greeting}, {user?.name || (isTelugu ? 'రోగి' : 'Patient')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Here is your centralized personal health overview and AI assistance.
+            {t('dashboard.welcomeSubtitle', 'Here is your centralized personal health overview and AI assistance.')}
           </p>
         </div>
       </div>
@@ -68,7 +73,7 @@ const Dashboard = () => {
       {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
 
       {loading ? (
-        <Loader message="Synchronizing health data..." />
+        <Loader message={isTelugu ? 'ఆరోగ్య డేటాను సమకాలీకరిస్తోంది...' : 'Synchronizing health data...'} />
       ) : (
         <>
           {/* Health Stats Cards */}
@@ -94,12 +99,12 @@ const Dashboard = () => {
                 <Bot size={18} />
               </div>
               <h3 style={{ fontSize: '1.1rem', margin: 0, color: '#312e81' }}>
-                AI Health Assistant
+                {t('dashboard.askAiTitle', 'AI Health Assistant')}
               </h3>
             </div>
 
             <p style={{ fontSize: '0.875rem', color: '#475569', marginBottom: '1rem', maxWidth: '750px' }}>
-              Ask questions directly about your uploaded blood reports, test results, doctor instructions, and medications.
+              {t('dashboard.askAiSubtitle', 'Ask questions directly about your uploaded blood reports, test results, doctor instructions, and medications.')}
             </p>
 
             <form onSubmit={handleAskAI} style={{ display: 'flex', gap: '0.75rem', maxWidth: '750px', flexWrap: 'wrap' }}>
@@ -107,7 +112,7 @@ const Dashboard = () => {
                 id="dashboard-ai-input"
                 type="text"
                 className="form-input"
-                placeholder="e.g. 'What was my cholesterol level in the latest blood report?' or 'When is my next appointment?'"
+                placeholder={t('dashboard.askAiPlaceholder', "e.g. 'What was my cholesterol level in the latest blood report?'")}
                 value={quickQuestion}
                 onChange={(e) => setQuickQuestion(e.target.value)}
                 style={{
@@ -123,7 +128,7 @@ const Dashboard = () => {
                 className="btn btn-accent"
                 style={{ flexShrink: 0 }}
               >
-                Ask <ArrowRight size={16} />
+                {t('dashboard.askAiBtn', 'Ask AI')} <ArrowRight size={16} />
               </button>
             </form>
           </div>

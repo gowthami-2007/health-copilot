@@ -72,7 +72,7 @@ class LLMService {
    * @param {Array} options.images - Optional attached images [{ mimeType: string, base64: string }]
    * @returns {Promise<string>} Generated response text
    */
-  async generateResponse({ message, history = [], documentContext = [], images = [] }) {
+  async generateResponse({ message, history = [], documentContext = [], images = [], preferredLanguage = 'en' }) {
     this.reloadConfig();
 
     if (!this.apiKey) {
@@ -88,6 +88,11 @@ class LLMService {
     if (documentContext && documentContext.length > 0) {
       systemContent += '\n\nAUTHORIZED USER HEALTH RECORDS CONTEXT:\n' +
         documentContext.map((d, i) => `[Document ${i + 1}: ${d.fileName || 'Report'}]\n${d.text || d.chunkText || d.extractedText || ''}`).join('\n\n');
+    }
+
+    // Append strict Telugu language directive if user selected Telugu
+    if (preferredLanguage === 'te') {
+      systemContent += '\n\nCRITICAL LANGUAGE DIRECTIVE:\nThe user has selected Telugu (తెలుగు) as their default application language. You MUST respond completely in natural, fluent Telugu script (తెలుగు లిపి). Provide clear, compassionate, and informative explanations in Telugu. Keep all clinical drug names (e.g. Metformin, Lisinopril), lab test acronyms (e.g. HbA1c, TSH, CBC, BP), decimal numbers, and measurement units (e.g. mg, mg/dL, mmHg) in standard Latin/English notation so that medical accuracy and patient safety are strictly preserved.';
     }
 
     // Sanitize conversation history (last 8 messages)
@@ -259,14 +264,14 @@ class LLMService {
    * @param {string} assistantReply - Optional assistant response for added context
    * @returns {Promise<string>} Cleaned 3-7 word title
    */
-  async generateConversationTitle(userMessage, assistantReply = '') {
+  async generateConversationTitle(userMessage, assistantReply = '', preferredLanguage = 'en') {
     this.reloadConfig();
 
     if (!userMessage || typeof userMessage !== 'string' || !userMessage.trim()) {
-      return 'Health Consultation';
+      return this.heuristicFallbackTitle('', preferredLanguage);
     }
 
-    const titleSystemInstruction = `You are a concise medical conversation title generator.
+    let titleSystemInstruction = `You are a concise medical conversation title generator.
 Read the user's healthcare question and generate a short, meaningful, title of 3 to 7 words that summarizes the main health topic.
 
 STRICT RULES:
@@ -276,12 +281,22 @@ STRICT RULES:
 4. Remove conversational filler phrases such as "Can you explain", "I want to know", "What are the", "Please tell me", "Hello", "I have uploaded".
 5. NEVER return generic titles like "New Chat", "Health Question", "AI Consultation", or "Question" if medical context exists.`;
 
+    if (preferredLanguage === 'te') {
+      titleSystemInstruction = `You are a concise medical conversation title generator.
+Read the user's healthcare question and generate a short, meaningful title of 2 to 5 words in Telugu (తెలుగు లిపి) that summarizes the topic.
+
+STRICT RULES:
+1. Return ONLY the title in Telugu (తెలుగు).
+2. Do NOT use quotes, bullets, prefixes, or punctuation at the end.
+3. Keep clinical concepts (e.g. "రక్తపోటు", "షుగర్ స్థాయిలు", "రక్త పరీక్ష ఫలితాలు", "మందుల సమీక్ష") natural.`;
+    }
+
     const promptText = `User Message: "${userMessage.trim()}"` +
       (assistantReply ? `\nAssistant Context: "${assistantReply.trim().substring(0, 300)}"` : '') +
-      `\n\nGenerate the 3-7 word title now:`;
+      `\n\nGenerate the concise title now:`;
 
     if (!this.apiKey) {
-      return this.heuristicFallbackTitle(userMessage);
+      return this.heuristicFallbackTitle(userMessage, preferredLanguage);
     }
 
     try {
@@ -302,30 +317,30 @@ STRICT RULES:
         rawTitle = await this.callOpenAIChatCompletion(messages);
       }
 
-      return this.cleanGeneratedTitle(rawTitle, userMessage);
+      return this.cleanGeneratedTitle(rawTitle, userMessage, preferredLanguage);
     } catch (err) {
       console.warn('LLM title generation failed, using intelligent heuristic fallback:', err.message);
-      return this.heuristicFallbackTitle(userMessage);
+      return this.heuristicFallbackTitle(userMessage, preferredLanguage);
     }
   }
 
   /**
    * Sanitizes and bounds the generated title.
    */
-  cleanGeneratedTitle(title, fallbackText = '') {
+  cleanGeneratedTitle(title, fallbackText = '', preferredLanguage = 'en') {
     if (!title || typeof title !== 'string') {
-      return this.heuristicFallbackTitle(fallbackText);
+      return this.heuristicFallbackTitle(fallbackText, preferredLanguage);
     }
 
     let cleaned = title
       .replace(/^["'`“”‘’]+|["'`“”‘’]+$/g, '') // Strip surrounding quotes
-      .replace(/^(Title|Topic|Chat Title|Subject):\s*/i, '') // Strip prefixes
+      .replace(/^(Title|Topic|Chat Title|Subject|శీర్షిక):\s*/i, '') // Strip prefixes
       .replace(/[.\n\r]+/g, ' ') // Remove newlines and trailing periods
       .replace(/\s+/g, ' ')
       .trim();
 
     if (!cleaned || cleaned.length < 3) {
-      return this.heuristicFallbackTitle(fallbackText);
+      return this.heuristicFallbackTitle(fallbackText, preferredLanguage);
     }
 
     // Ensure within reasonable character bounds
@@ -339,7 +354,11 @@ STRICT RULES:
   /**
    * Intelligent heuristic title fallback for offline or zero-LLM environments
    */
-  heuristicFallbackTitle(rawText) {
+  heuristicFallbackTitle(rawText, preferredLanguage = 'en') {
+    if (preferredLanguage === 'te') {
+      return 'ఆరోగ్య సంప్రదింపు';
+    }
+
     if (!rawText || typeof rawText !== 'string') return 'Health Consultation';
 
     // Remove common prefixes

@@ -3,6 +3,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import SuggestedQuestions from './SuggestedQuestions';
 import { Bot, ShieldCheck, Sparkles, MessageSquare } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 const ChatWindow = ({
   messages = [],
@@ -12,6 +13,7 @@ const ChatWindow = ({
   conversationTitle = 'Health Consultation',
   resetKey = 0,
 }) => {
+  const { t, isTelugu } = useLanguage();
   const messagesEndRef = useRef(null);
 
   // Only show the "Thinking..." indicator if loading AND the last message in chat was from the user
@@ -27,6 +29,10 @@ const ChatWindow = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  const displayTitle = conversationTitle === 'Health Consultation' || conversationTitle === 'New Health Consultation'
+    ? t('assistant.defaultConvTitle', 'Health Consultation')
+    : conversationTitle;
 
   return (
     <div
@@ -73,17 +79,17 @@ const ChatWindow = ({
           </div>
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700, color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-              {conversationTitle}
+              {displayTitle}
             </h3>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              <ShieldCheck size={12} color="#10b981" style={{ flexShrink: 0 }} /> Powered by RAG • Vault Isolation Active
+              <ShieldCheck size={12} color="#10b981" style={{ flexShrink: 0 }} /> {t('assistant.ragActive', 'Powered by RAG • Vault Isolation Active')}
             </span>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
           <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-            Health Copilot AI
+            {t('assistant.aiBadge', 'Health Copilot AI')}
           </span>
         </div>
       </div>
@@ -115,7 +121,7 @@ const ChatWindow = ({
             }}
           >
             <span className="spinner" style={{ width: '28px', height: '28px', borderWidth: '3px' }} />
-            <span>Loading consultation history...</span>
+            <span>{t('assistant.loadingHistory', 'Loading consultation history...')}</span>
           </div>
         ) : messages.length === 0 ? (
           <div
@@ -146,10 +152,10 @@ const ChatWindow = ({
             </div>
 
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
-              Ask me about your uploaded health records.
+              {t('assistant.emptyStateTitle', 'Ask me about your uploaded health records.')}
             </h3>
             <p style={{ maxWidth: '480px', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              I can explain medical reports, find past laboratory values, list your prescribed medications, and prepare proactive questions for your doctor.
+              {t('assistant.emptyStateSubtitle', 'I can explain medical reports, find past laboratory values, list your prescribed medications, and prepare proactive questions for your doctor.')}
             </p>
 
             <SuggestedQuestions onSelectQuestion={onSendMessage} />
@@ -191,7 +197,7 @@ const ChatWindow = ({
                   }}
                 >
                   <span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
-                  <span style={{ fontWeight: 500 }}>Thinking...</span>
+                  <span style={{ fontWeight: 500 }}>{t('assistant.thinking', 'Thinking...')}</span>
                 </div>
               </div>
             )}
@@ -205,7 +211,7 @@ const ChatWindow = ({
         <ChatInput key={resetKey} onSendMessage={onSendMessage} isLoading={isLoading} />
         <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', display: 'block', lineHeight: 1.4 }}>
-            AI-generated information is informational only. Does not diagnose or prescribe. Consult a licensed doctor for medical care.
+            {t('assistant.disclaimer', 'AI-generated information is informational only. Does not diagnose or prescribe. Consult a licensed doctor for medical care.')}
           </span>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import DocumentCard from './DocumentCard';
 import { FileQuestion, UploadCloud } from 'lucide-react';
 import Button from '../common/Button';
+import useLanguage from '../../hooks/useLanguage';
 
 const DocumentList = ({
   documents = [],
@@ -12,7 +13,17 @@ const DocumentList = ({
   searchTerm,
   onSearchChange,
 }) => {
-  const types = ['All', 'Blood Report', 'Prescription', 'Lab Report', 'Doctor Note', 'Imaging Report', 'Other'];
+  const { t, isTelugu } = useLanguage();
+
+  const typeOptions = [
+    { key: 'All', label: t('documents.allTypes', 'All') },
+    { key: 'Blood Report', label: isTelugu ? 'రక్త పరీక్ష నివేదిక' : 'Blood Report' },
+    { key: 'Prescription', label: t('documents.prescription', 'Prescription') },
+    { key: 'Lab Report', label: t('documents.labReport', 'Lab Report') },
+    { key: 'Doctor Note', label: isTelugu ? 'వైద్యుడి గమనిక' : 'Doctor Note' },
+    { key: 'Imaging Report', label: t('documents.imagingReport', 'Imaging Report') },
+    { key: 'Other', label: t('documents.other', 'Other') },
+  ];
 
   return (
     <div>
@@ -27,13 +38,13 @@ const DocumentList = ({
       }}>
         {/* Category Pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          {types.map((type) => {
-            const isSelected = selectedType === type;
+          {typeOptions.map((opt) => {
+            const isSelected = selectedType === opt.key;
             return (
               <button
-                key={type}
+                key={opt.key}
                 type="button"
-                onClick={() => onSelectType(type)}
+                onClick={() => onSelectType(opt.key)}
                 style={{
                   padding: '0.4rem 0.85rem',
                   borderRadius: 'var(--radius-full)',
@@ -46,7 +57,7 @@ const DocumentList = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                {type}
+                {opt.label}
               </button>
             );
           })}
@@ -57,7 +68,7 @@ const DocumentList = ({
           <input
             type="text"
             className="form-input"
-            placeholder="Search report name or test..."
+            placeholder={t('documents.searchPlaceholder', 'Search report name or test...')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             style={{ padding: '0.5rem 0.85rem', fontSize: '0.875rem' }}
@@ -86,13 +97,15 @@ const DocumentList = ({
             <FileQuestion size={32} />
           </div>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
-            You haven't uploaded any health documents yet.
+            {isTelugu ? 'మీరు ఇంకా ఎలాంటి వైద్య పత్రాలను అప్‌లోడ్ చేయలేదు.' : "You haven't uploaded any health documents yet."}
           </h3>
           <p style={{ maxWidth: '420px', margin: '0 auto 1.5rem auto', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Upload your laboratory blood work, imaging scans, prescriptions, or doctor summaries to start receiving AI explanations and insights.
+            {isTelugu
+              ? 'AI వివరణలు మరియు సారాంశాలు పొందడానికి మీ ల్యాబ్ రక్త పరీక్షలు, స్కాన్‌లు, ప్రిస్క్రిప్షన్లు లేదా వైద్యుల సారాంశాలను అప్‌లోడ్ చేయండి.'
+              : 'Upload your laboratory blood work, imaging scans, prescriptions, or doctor summaries to start receiving AI explanations and insights.'}
           </p>
           <Button variant="primary" onClick={onOpenUpload} icon={UploadCloud}>
-            Upload Document Now
+            {t('documents.uploadBtn', 'Upload Document Now')}
           </Button>
         </div>
       ) : (

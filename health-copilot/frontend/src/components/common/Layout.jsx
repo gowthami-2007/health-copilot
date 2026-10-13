@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { ShieldAlert } from 'lucide-react';
+import useLanguage from '../../hooks/useLanguage';
 
 const Layout = ({ children, pageTitle = 'Dashboard' }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="app-layout">
@@ -20,7 +22,7 @@ const Layout = ({ children, pageTitle = 'Dashboard' }) => {
           <div className="medical-disclaimer-banner" style={{ marginTop: '2.5rem' }}>
             <ShieldAlert size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
             <span>
-              <strong>Healthcare Advisory:</strong> Health Copilot is an AI-powered informational tool to organize records. It does not provide medical diagnoses, treatment plans, or emergency services. Consult a licensed healthcare provider for clinical decisions.
+              <strong>{t('disclaimer.title', 'Healthcare Advisory:')}</strong> {t('disclaimer.text', 'Health Copilot is an AI-powered informational tool to organize records. It does not provide medical diagnoses, treatment plans, or emergency services. Consult a licensed healthcare provider for clinical decisions.')}
             </span>
           </div>
         </main>

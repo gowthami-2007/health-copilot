@@ -12,14 +12,29 @@ import {
   Sparkles,
   FileText,
 } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
+  const { t } = useLanguage();
   const isUpcoming = appointment.status === 'UPCOMING';
   const isCompleted = appointment.status === 'COMPLETED';
   const isConsultation = appointment.type === 'CONSULTATION';
 
   const docId = appointment.sourceDocumentId?._id || appointment.sourceDocumentId;
   const docName = appointment.sourceDocumentId?.fileName;
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'UPCOMING':
+        return t('common.upcoming', 'UPCOMING');
+      case 'COMPLETED':
+        return t('common.completed', 'COMPLETED');
+      case 'CANCELLED':
+        return t('common.cancelled', 'CANCELLED');
+      default:
+        return status;
+    }
+  };
 
   return (
     <div
@@ -67,12 +82,12 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
               }}
             >
               {isConsultation ? <Stethoscope size={11} /> : <Calendar size={11} />}
-              {isConsultation ? 'Consultation' : 'Appointment'}
+              {isConsultation ? t('appointments.consultationsTab', 'Consultation') : t('appointments.appointmentsTab', 'Appointment')}
             </span>
 
             {/* Status Badge */}
             <span className={`badge ${isUpcoming ? 'badge-primary' : isCompleted ? 'badge-success' : 'badge-neutral'}`}>
-              {appointment.status}
+              {getStatusLabel(appointment.status)}
             </span>
 
             {onEdit && (
@@ -80,8 +95,8 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
                 type="button"
                 onClick={() => onEdit(appointment)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '0.3rem', display: 'flex' }}
-                title="Edit record"
-                aria-label="Edit record"
+                title={t('common.edit', 'Edit record')}
+                aria-label={t('common.edit', 'Edit record')}
               >
                 <Edit2 size={15} />
               </button>
@@ -92,8 +107,8 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
                 type="button"
                 onClick={() => onDelete(appointment._id)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '0.3rem', display: 'flex' }}
-                title="Delete record"
-                aria-label="Delete record"
+                title={t('common.delete', 'Delete record')}
+                aria-label={t('common.delete', 'Delete record')}
               >
                 <Trash2 size={15} />
               </button>
@@ -121,7 +136,7 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
             <Clock size={15} />
-            <span>Time: {appointment.time}</span>
+            <span>{t('common.time', 'Time')}: {appointment.time}</span>
           </div>
 
           {appointment.location && (
@@ -133,13 +148,13 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
 
           {appointment.reason && (
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.4 }}>
-              <strong>{isConsultation ? 'Assessment / Reason:' : 'Reason:'}</strong> {appointment.reason}
+              <strong>{isConsultation ? `${t('appointments.reason', 'Assessment / Reason')}:` : `${t('appointments.reason', 'Reason')}:`}</strong> {appointment.reason}
             </p>
           )}
 
           {appointment.notes && (
             <p style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', lineHeight: 1.4 }}>
-              <strong>Notes:</strong> {appointment.notes}
+              <strong>{t('appointments.notes', 'Notes')}:</strong> {appointment.notes}
             </p>
           )}
 
@@ -158,7 +173,7 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
               color: 'var(--text-muted)',
             }}>
               <Sparkles size={13} color="#f59e0b" />
-              <span>Auto-extracted from document:</span>
+              <span>{t('appointments.autoExtracted', 'Auto-extracted from document')}:</span>
               {docId ? (
                 <Link
                   to={`/documents/${docId}`}
@@ -171,9 +186,9 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
                     whiteSpace: 'nowrap',
                     maxWidth: '170px',
                   }}
-                  title={docName || 'View Document'}
+                  title={docName || t('common.view', 'View Document')}
                 >
-                  {docName || 'View Document'}
+                  {docName || t('common.view', 'View Document')}
                 </Link>
               ) : (
                 <span style={{ fontWeight: 600 }}>Medical File</span>
@@ -204,7 +219,7 @@ const AppointmentCard = ({ appointment, onEdit, onDelete, onComplete }) => {
               cursor: 'pointer',
             }}
           >
-            <CheckCircle size={14} /> Mark as Completed
+            <CheckCircle size={14} /> {t('common.completed', 'Mark as Completed')}
           </button>
         </div>
       )}

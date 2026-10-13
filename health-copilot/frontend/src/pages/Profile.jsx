@@ -3,6 +3,7 @@ import Layout from '../components/common/Layout';
 import Button from '../components/common/Button';
 import ErrorMessage from '../components/common/ErrorMessage';
 import useAuth from '../hooks/useAuth';
+import useLanguage from '../hooks/useLanguage';
 import profileService from '../services/profileService';
 import {
   User,
@@ -25,6 +26,7 @@ import {
 
 const Profile = () => {
   const { user, setUser, logout } = useAuth();
+  const { language, setLanguage, t, isTelugu } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -65,12 +67,17 @@ const Profile = () => {
 
   const handleLanguageChange = async (lang) => {
     setFormData((prev) => ({ ...prev, preferredLanguage: lang }));
+    setLanguage(lang);
     try {
       setLoading(true);
       const res = await profileService.updateProfile({ preferredLanguage: lang });
       setUser(res.data.user);
       localStorage.setItem('health_copilot_user', JSON.stringify(res.data.user));
-      setSuccessMsg(`Default language set to ${lang === 'te' ? 'Telugu (తెలుగు)' : 'English'}.`);
+      setSuccessMsg(
+        lang === 'te'
+          ? t('profile.langSavedNotice', 'Default language set to Telugu (తెలుగు). The entire application and AI assistant are now presented in Telugu.')
+          : t('profile.langSavedNoticeEn', 'Default language set to English.')
+      );
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update preferred language.');
     } finally {
@@ -169,14 +176,14 @@ const Profile = () => {
   };
 
   return (
-    <Layout pageTitle="Patient Profile & Privacy Settings">
+    <Layout pageTitle={t('profile.pageTitle', 'Patient Profile & Privacy Settings')}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-            Personal Profile & Privacy
+            {t('profile.pageTitle', 'Personal Profile & Privacy')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Manage your personal healthcare profile and data privacy controls.
+            {t('profile.subtitle', 'Manage your personal healthcare profile and data privacy controls.')}
           </p>
         </div>
 
@@ -205,13 +212,13 @@ const Profile = () => {
         {/* Profile Details Form */}
         <div className="card" style={{ marginBottom: '2rem' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={20} color="var(--primary)" /> Profile Information
+            <User size={20} color="var(--primary)" /> {t('profile.infoSection', 'Profile Information')}
           </h3>
 
           <form onSubmit={handleUpdate}>
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label" htmlFor="profile-name">Full Name</label>
+                <label className="form-label" htmlFor="profile-name">{t('profile.fullName', 'Full Name')}</label>
                 <input
                   id="profile-name"
                   type="text"
@@ -224,7 +231,7 @@ const Profile = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="profile-email">Email (Immutable)</label>
+                <label className="form-label" htmlFor="profile-email">{t('profile.email', 'Email (Immutable)')}</label>
                 <input
                   id="profile-email"
                   type="email"
@@ -238,7 +245,7 @@ const Profile = () => {
 
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label" htmlFor="profile-dob">Date of Birth</label>
+                <label className="form-label" htmlFor="profile-dob">{t('profile.dob', 'Date of Birth')}</label>
                 <input
                   id="profile-dob"
                   type="date"
@@ -250,7 +257,7 @@ const Profile = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="profile-gender">Gender Identity</label>
+                <label className="form-label" htmlFor="profile-gender">{t('profile.gender', 'Gender Identity')}</label>
                 <select
                   id="profile-gender"
                   name="gender"
@@ -258,34 +265,34 @@ const Profile = () => {
                   value={formData.gender}
                   onChange={handleChange}
                 >
-                  <option value="">Prefer not to say</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other / Non-binary</option>
+                  <option value="">{t('profile.genderPreferNot', 'Prefer not to say')}</option>
+                  <option value="male">{t('profile.genderMale', 'Male')}</option>
+                  <option value="female">{t('profile.genderFemale', 'Female')}</option>
+                  <option value="other">{t('profile.genderOther', 'Other / Non-binary')}</option>
                 </select>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <Button type="submit" variant="primary" isLoading={loading}>
-                Save Profile Changes
+                {t('profile.saveChanges', 'Save Profile Changes')}
               </Button>
             </div>
           </form>
         </div>
 
-        {/* Regional Language Settings (Phase 6) */}
+        {/* Regional Language Settings */}
         <div className="card" style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Globe size={20} color="var(--primary)" /> Regional Language Settings
+              <Globe size={20} color="var(--primary)" /> {t('profile.langSection', 'Regional Language Settings')}
             </h3>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
-              Bilingual AI Copilot
+              {t('profile.langBadge', 'Bilingual AI Copilot')}
             </span>
           </div>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-            Choose your preferred language for AI medical summaries, health interpretations, and doctor questions. Clinical lab values, decimal precision, and medication brand names are strictly preserved in their original form.
+            {t('profile.langSubtitle', 'Choose your preferred language for the entire application interface, AI medical summaries, health interpretations, and chat box consultations. Clinical lab values, decimal precision, and medication brand names are strictly preserved in their original form.')}
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
@@ -302,19 +309,19 @@ const Profile = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: formData.preferredLanguage === 'en' ? 'var(--primary)' : 'var(--text-main)' }}>
-                  English (Default)
+                  {t('profile.langEnglish', 'English (Default)')}
                 </span>
                 {formData.preferredLanguage === 'en' && <CheckCircle2 size={18} color="var(--primary)" />}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                Plain-language clinical summaries & AI assistant consultations in standard English.
+                {t('profile.langEnglishDesc', 'Plain-language clinical summaries & AI assistant consultations in standard English.')}
               </p>
             </div>
 
             <div
               onClick={() => handleLanguageChange('te')}
               style={{
-                border: `2px solid ${formData.preferredLanguage === 'te' ? 'var(--primary)' : 'var(--border-light)'}`,
+                border: `2px solid ${formData.preferredLanguage === 'te' ? '#16a34a' : 'var(--border-light)'}`,
                 backgroundColor: formData.preferredLanguage === 'te' ? '#f0fdf4' : '#ffffff',
                 borderRadius: 'var(--radius-md)',
                 padding: '1rem',
@@ -324,12 +331,12 @@ const Profile = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: formData.preferredLanguage === 'te' ? '#16a34a' : 'var(--text-main)' }}>
-                  తెలుగు (Telugu)
+                  {t('profile.langTelugu', 'తెలుగు (Telugu)')}
                 </span>
                 {formData.preferredLanguage === 'te' && <CheckCircle2 size={18} color="#16a34a" />}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                తెలుగులో సమగ్ర ఆరోగ్య సారాంశాలు మరియు వివరణలు (యూనిట్లు మరియు మందుల పేర్లు యధాతథంగా ఉంటాయి).
+                {t('profile.langTeluguDesc', 'తెలుగులో మొత్తం అప్లికేషన్, AI సంప్రదింపులు మరియు సమగ్ర ఆరోగ్య సారాంశాలు (ల్యాబ్ యూనిట్లు & మందుల పేర్లు యధాతథంగా ఉంటాయి).')}
               </p>
             </div>
           </div>
@@ -339,7 +346,7 @@ const Profile = () => {
         <div className="card" style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Database size={20} color="#6366f1" /> ABDM / ABHA Readiness (Mock Sandbox)
+              <Database size={20} color="#6366f1" /> {t('profile.abdmSection', 'ABDM / ABHA Readiness (Mock Sandbox)')}
             </h3>
             <span
               style={{
@@ -357,7 +364,7 @@ const Profile = () => {
           </div>
 
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-            Ayushman Bharat Digital Mission (ABDM) integration prototype. Simulates federated electronic health record (EHR) discovery, consent-based record import, and FHIR R4 Bundle exchange without connecting to live government APIs.
+            {t('profile.abdmSubtitle', 'Ayushman Bharat Digital Mission (ABDM) integration prototype. Simulates federated electronic health record (EHR) discovery, consent-based record import, and FHIR R4 Bundle exchange without connecting to live government APIs.')}
           </p>
 
           {user?.mockAbha?.isLinked ? (
@@ -522,10 +529,10 @@ const Profile = () => {
         {/* Security & Data Privacy Section */}
         <div className="card" style={{ marginBottom: '2rem' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Shield size={20} color="#059669" /> Data Isolation & Privacy Security
+            <Shield size={20} color="#059669" /> {t('profile.securitySection', 'Data Isolation & Privacy Security')}
           </h3>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            Health Copilot isolates all documents, lab measurements, prescriptions, and AI conversations strictly to your individual account ID. No other user can retrieve, search, or view your records.
+            {t('profile.securitySubtitle', 'Health Copilot isolates all documents, lab measurements, prescriptions, and AI conversations strictly to your individual account ID. No other user can retrieve, search, or view your records.')}
           </p>
 
           <div style={{
@@ -550,10 +557,10 @@ const Profile = () => {
         {/* Danger Zone: Account & Health Records Erasure */}
         <div className="card" style={{ borderColor: 'var(--danger-border)', backgroundColor: '#fffbfb' }}>
           <h3 style={{ fontSize: '1.2rem', color: 'var(--danger)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Trash2 size={20} color="var(--danger)" /> Danger Zone: Erase All Data & Account
+            <Trash2 size={20} color="var(--danger)" /> {t('profile.dangerSection', 'Danger Zone: Erase All Data & Account')}
           </h3>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-            Permanently delete your account along with all uploaded medical PDFs, OCR transcripts, AI chat histories, active medications, and scheduled appointments. This action cannot be undone.
+            {t('profile.dangerSubtitle', 'Permanently delete your account along with all uploaded medical PDFs, OCR transcripts, AI chat histories, active medications, and scheduled appointments. This action cannot be undone.')}
           </p>
 
           {!deleteConfirmOpen ? (
@@ -562,7 +569,7 @@ const Profile = () => {
               onClick={() => setDeleteConfirmOpen(true)}
               icon={Trash2}
             >
-              Delete My Account and All Health Records
+              {t('profile.dangerBtn', 'Delete My Account and All Health Records')}
             </Button>
           ) : (
             <div style={{
@@ -584,7 +591,7 @@ const Profile = () => {
                   size="sm"
                   onClick={() => setDeleteConfirmOpen(false)}
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant="danger"
@@ -592,7 +599,7 @@ const Profile = () => {
                   onClick={handleDeleteAccount}
                   isLoading={isDeleting}
                 >
-                  Confirm & Erase Everything
+                  {t('common.confirm', 'Confirm & Erase Everything')}
                 </Button>
               </div>
             </div>

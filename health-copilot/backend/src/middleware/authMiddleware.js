@@ -43,6 +43,7 @@ const protect = async (req, res, next) => {
       name: user.name,
       email: user.email,
       isEmailVerified: Boolean(user.isEmailVerified),
+      preferredLanguage: user.preferredLanguage || 'en',
     };
 
     next();
@@ -93,6 +94,7 @@ const optionalAuth = async (req, res, next) => {
             _id: user._id,
             name: user.name,
             email: user.email,
+            preferredLanguage: user.preferredLanguage || 'en',
           };
         }
       }

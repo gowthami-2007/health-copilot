@@ -3,6 +3,7 @@ const path = require('path');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Document = require('../models/Document');
+const User = require('../models/User');
 const llmService = require('./llm.service');
 const documentService = require('./documentService');
 const { processDocumentFile } = require('../../../document-service/src/processing/documentProcessor');
@@ -67,7 +68,7 @@ class AIChatService {
   /**
    * Sends a user query to the real LLM pipeline with multi-turn history & user document context.
    */
-  async sendMessage({ userId, conversationId, question, message, history = [], attachments = [] }) {
+  async sendMessage({ userId, conversationId, question, message, history = [], attachments = [], preferredLanguage = null }) {
     const rawQuery = (message || question || '').trim();
 
     if (!rawQuery && (!Array.isArray(attachments) || attachments.length === 0)) {
@@ -78,10 +79,19 @@ class AIChatService {
       throw new BadRequestError('Message exceeds maximum allowed length of 2500 characters');
     }
 
+    // Determine active language
+    let effectiveLang = preferredLanguage;
+    if (!effectiveLang && userId) {
+      const userDoc = await User.findById(userId).select('preferredLanguage');
+      effectiveLang = userDoc?.preferredLanguage || 'en';
+    }
+    effectiveLang = effectiveLang || 'en';
+
     // 1. Get or create conversation record
     let conversation = null;
     if (userId) {
-      conversation = await this.getOrCreateConversation(userId, conversationId, 'New Consultation');
+      const defaultTitle = effectiveLang === 'te' ? 'కొత్త సంప్రదింపు' : 'New Consultation';
+      conversation = await this.getOrCreateConversation(userId, conversationId, defaultTitle);
     }
 
     // 2. Build multi-turn conversation context
@@ -222,6 +232,7 @@ class AIChatService {
         history: formattedHistory,
         documentContext,
         images: attachmentImages,
+        preferredLanguage: effectiveLang,
       });
     } catch (llmError) {
       console.error('LLM generation error in AIChatService:', llmError.message);
@@ -233,7 +244,7 @@ class AIChatService {
       if (llmError.message.includes('AI_CONFIG_MISSING')) {
         throw new Error('The AI service is not configured. Please set AI_API_KEY in the backend environment.');
       }
-      throw new Error('The AI service is temporarily unavailable. Please try again.');
+      throw new Error(effectiveLang === 'te' ? 'AI సేవ తాత్కాలికంగా అందుబాటులో లేదు. దయచేసి మళ్ళీ ప్రయత్నించండి.' : 'The AI service is temporarily unavailable. Please try again.');
     }
 
     // 7. Record assistant message in DB
@@ -250,7 +261,7 @@ class AIChatService {
       // If the conversation still has a default or un-customized title, generate a meaningful 3-7 word title
       if (!conversation.isCustomTitle) {
         try {
-          const generatedTitle = await llmService.generateConversationTitle(effectiveQuery, generatedAnswer);
+          const generatedTitle = await llmService.generateConversationTitle(effectiveQuery, generatedAnswer, effectiveLang);
           if (generatedTitle && generatedTitle.trim()) {
             conversation.title = generatedTitle.trim();
             conversation.isCustomTitle = true;
@@ -258,8 +269,8 @@ class AIChatService {
         } catch (titleErr) {
           console.warn('Non-blocking title generation error:', titleErr.message);
           // Retain intelligent heuristic title without breaking
-          if (!conversation.title || conversation.title === 'New Consultation' || conversation.title === 'Health Consultation') {
-            conversation.title = llmService.heuristicFallbackTitle(effectiveQuery);
+          if (!conversation.title || conversation.title === 'New Consultation' || conversation.title === 'Health Consultation' || conversation.title === 'కొత్త సంప్రదింపు' || conversation.title === 'ఆరోగ్య సంప్రదింపు') {
+            conversation.title = llmService.heuristicFallbackTitle(effectiveQuery, effectiveLang);
             conversation.isCustomTitle = true;
           }
         }

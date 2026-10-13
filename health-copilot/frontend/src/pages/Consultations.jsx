@@ -7,9 +7,11 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Button from '../components/common/Button';
 import appointmentService from '../services/appointmentService';
+import { useLanguage } from '../hooks/useLanguage';
 import { Stethoscope, Plus, CheckCircle, Calendar, Sparkles, Clock } from 'lucide-react';
 
 const Consultations = () => {
+  const { t } = useLanguage();
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,7 +66,7 @@ const Consultations = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this consultation record?')) return;
+    if (!window.confirm(t('common.confirm', 'Delete this consultation record?'))) return;
     try {
       await appointmentService.deleteAppointment(id);
       setConsultations((prev) => prev.filter((c) => c._id !== id));
@@ -92,8 +94,15 @@ const Consultations = () => {
   const completedCount = consultations.filter((c) => c.status === 'COMPLETED').length;
   const upcomingCount = consultations.filter((c) => c.status === 'UPCOMING').length;
 
+  const statusOptions = [
+    { key: 'ALL', label: t('common.all', 'ALL') },
+    { key: 'COMPLETED', label: t('common.completed', 'COMPLETED') },
+    { key: 'UPCOMING', label: t('common.upcoming', 'UPCOMING') },
+    { key: 'CANCELLED', label: t('common.cancelled', 'CANCELLED') },
+  ];
+
   return (
-    <Layout pageTitle="Doctor Consultations">
+    <Layout pageTitle={t('consultations.pageTitle', 'Doctor Consultations')}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -119,16 +128,16 @@ const Consultations = () => {
           </div>
           <div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-              Doctor Consultations
+              {t('consultations.pageTitle', 'Doctor Consultations')}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-              Track clinical evaluations, doctor assessments, and physician notes extracted from documents.
+              {t('consultations.subtitle', 'Track clinical evaluations, doctor assessments, and physician notes extracted from documents.')}
             </p>
           </div>
         </div>
 
         <Button id="open-add-consultation-btn" variant="primary" onClick={openAddModal} icon={Plus}>
-          Record Consultation
+          {t('consultations.scheduleBtn', 'Record Consultation')}
         </Button>
       </div>
 
@@ -159,7 +168,7 @@ const Consultations = () => {
               {consultations.length}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Total Consultations
+              {t('consultations.totalConsultations', 'Total Consultations')}
             </div>
           </div>
         </div>
@@ -182,7 +191,7 @@ const Consultations = () => {
               {completedCount}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Completed Reviews
+              {t('consultations.completed', 'Completed Reviews')}
             </div>
           </div>
         </div>
@@ -205,7 +214,7 @@ const Consultations = () => {
               {upcomingCount}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Scheduled Consultations
+              {t('consultations.scheduled', 'Scheduled Consultations')}
             </div>
           </div>
         </div>
@@ -228,7 +237,7 @@ const Consultations = () => {
               {autoExtractedCount}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Auto-Extracted
+              {t('consultations.autoExtracted', 'Auto-Extracted')}
             </div>
           </div>
         </div>
@@ -236,31 +245,31 @@ const Consultations = () => {
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {['ALL', 'COMPLETED', 'UPCOMING', 'CANCELLED'].map((status) => (
+        {statusOptions.map((status) => (
           <button
-            key={status}
+            key={status.key}
             type="button"
-            onClick={() => setFilterStatus(status)}
+            onClick={() => setFilterStatus(status.key)}
             style={{
               padding: '0.4rem 0.95rem',
               borderRadius: 'var(--radius-full)',
-              border: `1px solid ${filterStatus === status ? '#6d28d9' : 'var(--border-light)'}`,
-              backgroundColor: filterStatus === status ? '#6d28d9' : '#ffffff',
-              color: filterStatus === status ? '#ffffff' : 'var(--text-muted)',
+              border: `1px solid ${filterStatus === status.key ? '#6d28d9' : 'var(--border-light)'}`,
+              backgroundColor: filterStatus === status.key ? '#6d28d9' : '#ffffff',
+              color: filterStatus === status.key ? '#ffffff' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
           >
-            {status}
+            {status.label}
           </button>
         ))}
       </div>
 
       {/* Consultations List */}
       {loading && consultations.length === 0 ? (
-        <Loader message="Loading doctor consultation records..." />
+        <Loader message={t('common.loading', 'Loading doctor consultation records...')} />
       ) : consultations.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div style={{
@@ -277,13 +286,13 @@ const Consultations = () => {
             <Stethoscope size={32} />
           </div>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
-            No doctor consultations recorded yet.
+            {t('consultations.noRecords', 'No doctor consultations recorded yet.')}
           </h3>
           <p style={{ maxWidth: '440px', margin: '0 auto 1.5rem auto', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            Whenever you upload medical slips, prescription notes, or clinical reports mentioning a doctor consultation, they are automatically parsed and cataloged here.
+            {t('consultations.subtitle', 'Whenever you upload medical slips, prescription notes, or clinical reports mentioning a doctor consultation, they are automatically parsed and cataloged here.')}
           </p>
           <Button variant="primary" onClick={openAddModal} icon={Plus}>
-            Record First Consultation
+            {t('consultations.scheduleBtn', 'Record First Consultation')}
           </Button>
         </div>
       ) : (
@@ -307,7 +316,7 @@ const Consultations = () => {
           setIsModalOpen(false);
           setEditingConsultation(null);
         }}
-        title={editingConsultation ? 'Edit Doctor Consultation' : 'Record Doctor Consultation'}
+        title={editingConsultation ? t('common.edit', 'Edit Doctor Consultation') : t('consultations.scheduleBtn', 'Record Doctor Consultation')}
       >
         <AppointmentForm
           initialData={editingConsultation}

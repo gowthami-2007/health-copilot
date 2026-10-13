@@ -6,8 +6,10 @@ import aiService from '../services/aiService';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { Plus, MessageSquare, Trash2, Bot, Clock, Edit2, Check, X } from 'lucide-react';
 import Button from '../components/common/Button';
+import useLanguage from '../hooks/useLanguage';
 
 const Assistant = () => {
+  const { language, t, isTelugu } = useLanguage();
   const location = useLocation();
   const initialPrompt = location.state?.initialPrompt;
 
@@ -186,7 +188,8 @@ const Assistant = () => {
         targetConversationId,
         historyPayload,
         abortController.signal,
-        uploadedAttachments
+        uploadedAttachments,
+        language
       );
 
       // If a newer request was dispatched or the user clicked New Consultation, drop stale response
@@ -340,7 +343,7 @@ const Assistant = () => {
   const activeConv = conversations.find((c) => c._id === activeConversationId);
 
   return (
-    <Layout pageTitle="AI Health Assistant">
+    <Layout pageTitle={t('assistant.pageTitle', 'AI Health Assistant')}>
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
       {/* Mobile Toolbar (visible only <= 1024px via CSS) */}
@@ -355,7 +358,7 @@ const Assistant = () => {
           }}
           icon={Plus}
         >
-          New Consultation
+          {t('assistant.newConsultation', 'New Consultation')}
         </Button>
 
         <button
@@ -366,7 +369,7 @@ const Assistant = () => {
           aria-expanded={showMobileHistory}
         >
           <MessageSquare size={15} />
-          <span>Consultations ({conversations.length})</span>
+          <span>{t('assistant.consultationsCount', 'Consultations')} ({conversations.length})</span>
         </button>
       </div>
 
@@ -381,17 +384,17 @@ const Assistant = () => {
               icon={Plus}
               style={{ width: '100%', marginBottom: '1.25rem' }}
             >
-              New Consultation
+              {t('assistant.newConsultation', 'New Consultation')}
             </Button>
 
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
-              Consultation History
+              {t('assistant.consultationHistory', 'Consultation History')}
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {conversations.length === 0 ? (
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', textAlign: 'center', marginTop: '2rem' }}>
-                  No prior conversations. Ask a question to begin.
+                  {t('assistant.noHistory', 'No prior conversations. Ask a question to begin.')}
                 </p>
               ) : (
                 conversations.map((c) => {
@@ -549,7 +552,7 @@ const Assistant = () => {
             isLoading={sendingQuery}
             isHistoryLoading={loadingMessages && messages.length === 0}
             onSendMessage={handleSendMessage}
-            conversationTitle={activeConv?.title || 'New Health Consultation'}
+            conversationTitle={activeConv?.title || t('assistant.defaultConvTitle', 'New Health Consultation')}
             resetKey={resetKey}
           />
         </div>

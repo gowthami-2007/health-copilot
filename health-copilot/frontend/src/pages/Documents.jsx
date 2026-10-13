@@ -8,8 +8,10 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import documentService from '../services/documentService';
 import { UploadCloud, Plus } from 'lucide-react';
 import Button from '../components/common/Button';
+import useLanguage from '../hooks/useLanguage';
 
 const Documents = () => {
+  const { t, isTelugu } = useLanguage();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +42,7 @@ const Documents = () => {
   }, [fetchDocuments]);
 
   const handleDelete = async (docId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this health document?')) {
+    if (!window.confirm(isTelugu ? 'మీరు ఖచ్చితంగా ఈ వైద్య పత్రాన్ని శాశ్వతంగా తొలగించాలనుకుంటున్నారా?' : 'Are you sure you want to permanently delete this health document?')) {
       return;
     }
 
@@ -58,7 +60,7 @@ const Documents = () => {
   };
 
   return (
-    <Layout pageTitle="Personal Health Documents">
+    <Layout pageTitle={t('documents.pageTitle', 'Medical Documents Vault')}>
       {/* Page Header */}
       <div style={{
         display: 'flex',
@@ -70,10 +72,10 @@ const Documents = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-            Health Records & Reports
+            {t('documents.pageTitle', 'Health Records & Reports')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Store, view, and analyze all your blood tests, prescriptions, and medical reports.
+            {t('documents.subtitle', 'Store, view, and analyze all your blood tests, prescriptions, and medical reports.')}
           </p>
         </div>
 
@@ -83,14 +85,14 @@ const Documents = () => {
           onClick={() => setIsUploadModalOpen(true)}
           icon={Plus}
         >
-          Upload New Document
+          {t('documents.uploadBtn', 'Upload New Document')}
         </Button>
       </div>
 
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
 
       {loading && documents.length === 0 ? (
-        <Loader message="Loading your health repository..." />
+        <Loader message={isTelugu ? 'మీ ఆరోగ్య రికార్డులను లోడ్ చేస్తోంది...' : 'Loading your health repository...'} />
       ) : (
         <DocumentList
           documents={documents}
@@ -107,7 +109,7 @@ const Documents = () => {
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        title="Upload Medical Document"
+        title={t('documents.uploadBtn', 'Upload Medical Document')}
         maxWidth="600px"
       >
         <DocumentUpload

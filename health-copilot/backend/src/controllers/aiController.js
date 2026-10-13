@@ -48,7 +48,7 @@ class AIController {
    */
   async chat(req, res, next) {
     try {
-      const { question, message, conversationId, history, attachments } = req.body;
+      const { question, message, conversationId, history, attachments, preferredLanguage } = req.body;
       const rawText = (message || question || '').trim();
 
       if (!rawText && (!Array.isArray(attachments) || attachments.length === 0)) {
@@ -59,6 +59,8 @@ class AIController {
         throw new BadRequestError('Message exceeds maximum allowed length of 2500 characters.');
       }
 
+      const effectiveLang = preferredLanguage || req.user?.preferredLanguage || 'en';
+
       const result = await aiChatService.sendMessage({
         userId: req.user?.id || null,
         conversationId,
@@ -66,6 +68,7 @@ class AIController {
         message: rawText,
         history,
         attachments: Array.isArray(attachments) ? attachments : [],
+        preferredLanguage: effectiveLang,
       });
 
       return res.status(200).json({

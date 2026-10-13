@@ -7,9 +7,11 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import appointmentService from '../services/appointmentService';
 import Button from '../components/common/Button';
+import { useLanguage } from '../hooks/useLanguage';
 import { Plus, Calendar } from 'lucide-react';
 
 const Appointments = () => {
+  const { t } = useLanguage();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,7 +63,7 @@ const Appointments = () => {
   };
 
   const handleDelete = async (aptId) => {
-    if (!window.confirm('Delete this appointment record?')) return;
+    if (!window.confirm(t('common.confirm', 'Delete this appointment record?'))) return;
     try {
       await appointmentService.deleteAppointment(aptId);
       setAppointments((prev) => prev.filter((a) => a._id !== aptId));
@@ -84,8 +86,21 @@ const Appointments = () => {
     setIsModalOpen(true);
   };
 
+  const typeOptions = [
+    { id: 'ALL', label: t('appointments.allTab', 'All Records') },
+    { id: 'APPOINTMENT', label: t('appointments.appointmentsTab', 'Appointments') },
+    { id: 'CONSULTATION', label: t('appointments.consultationsTab', 'Consultations') },
+  ];
+
+  const statusOptions = [
+    { key: 'ALL', label: t('common.all', 'ALL') },
+    { key: 'UPCOMING', label: t('common.upcoming', 'UPCOMING') },
+    { key: 'COMPLETED', label: t('common.completed', 'COMPLETED') },
+    { key: 'CANCELLED', label: t('common.cancelled', 'CANCELLED') },
+  ];
+
   return (
-    <Layout pageTitle="Appointment Management">
+    <Layout pageTitle={t('appointments.pageTitle', 'Appointment Management')}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -96,15 +111,15 @@ const Appointments = () => {
       }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
-            Doctor Visits & Appointments
+            {t('appointments.pageTitle', 'Doctor Visits & Appointments')}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Coordinate clinical consultations, follow-up tests, and physician notes.
+            {t('appointments.subtitle', 'Coordinate clinical consultations, follow-up tests, and physician notes.')}
           </p>
         </div>
 
         <Button id="open-add-apt-btn" variant="primary" onClick={openAddModal} icon={Plus}>
-          Schedule Appointment
+          {t('appointments.scheduleBtn', 'Schedule Appointment')}
         </Button>
       </div>
 
@@ -123,11 +138,7 @@ const Appointments = () => {
       }}>
         {/* Category Type Filter */}
         <div style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#f1f5f9', padding: '0.25rem', borderRadius: 'var(--radius-md)' }}>
-          {[
-            { id: 'ALL', label: 'All Records' },
-            { id: 'APPOINTMENT', label: 'Appointments' },
-            { id: 'CONSULTATION', label: 'Consultations' },
-          ].map((typeItem) => (
+          {typeOptions.map((typeItem) => (
             <button
               key={typeItem.id}
               type="button"
@@ -152,30 +163,30 @@ const Appointments = () => {
 
         {/* Status Filter */}
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          {['ALL', 'UPCOMING', 'COMPLETED', 'CANCELLED'].map((status) => (
+          {statusOptions.map((status) => (
             <button
-              key={status}
+              key={status.key}
               type="button"
-              onClick={() => setFilterStatus(status)}
+              onClick={() => setFilterStatus(status.key)}
               style={{
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                border: `1px solid ${filterStatus === status ? 'var(--primary)' : 'var(--border-light)'}`,
-                backgroundColor: filterStatus === status ? 'var(--primary)' : '#ffffff',
-                color: filterStatus === status ? '#ffffff' : 'var(--text-muted)',
+                border: `1px solid ${filterStatus === status.key ? 'var(--primary)' : 'var(--border-light)'}`,
+                backgroundColor: filterStatus === status.key ? 'var(--primary)' : '#ffffff',
+                color: filterStatus === status.key ? '#ffffff' : 'var(--text-muted)',
                 fontSize: '0.78rem',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              {status}
+              {status.label}
             </button>
           ))}
         </div>
       </div>
 
       {loading && appointments.length === 0 ? (
-        <Loader message="Loading appointment schedule..." />
+        <Loader message={t('common.loading', 'Loading appointment schedule...')} />
       ) : (
         <AppointmentList
           appointments={appointments}

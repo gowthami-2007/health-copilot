@@ -1,20 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Image, Trash2, ArrowRight, Eye, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const DocumentCard = ({ document, onDelete }) => {
+  const { t } = useLanguage();
   const isPdf = document.fileType?.includes('pdf') || document.fileName?.endsWith('.pdf');
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PROCESSED':
-        return <span className="badge badge-success"><CheckCircle2 size={12} /> Summarized</span>;
+        return <span className="badge badge-success"><CheckCircle2 size={12} /> {t('documents.statusProcessed', 'Summarized')}</span>;
       case 'PROCESSING':
-        return <span className="badge badge-warning"><Clock size={12} /> Processing</span>;
+        return <span className="badge badge-warning"><Clock size={12} /> {t('documents.statusProcessing', 'Processing')}</span>;
       case 'FAILED':
-        return <span className="badge badge-danger"><AlertTriangle size={12} /> Unreadable</span>;
+        return <span className="badge badge-danger"><AlertTriangle size={12} /> {t('documents.statusFailed', 'Unreadable')}</span>;
       default:
-        return <span className="badge badge-neutral"><Clock size={12} /> Uploaded</span>;
+        return <span className="badge badge-neutral"><Clock size={12} /> {t('documents.statusPending', 'Uploaded')}</span>;
     }
   };
 
@@ -67,10 +69,10 @@ const DocumentCard = ({ document, onDelete }) => {
                 display: 'flex',
                 transition: 'color 0.15s ease'
               }}
-              title="Delete document"
+              title={t('common.delete', 'Delete document')}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-subtle)'}
-              aria-label="Delete document"
+              aria-label={t('common.delete', 'Delete document')}
             >
               <Trash2 size={16} />
             </button>
@@ -137,7 +139,7 @@ const DocumentCard = ({ document, onDelete }) => {
             textDecoration: 'none'
           }}
         >
-          View Details <ArrowRight size={14} />
+          {t('documents.viewDetails', 'View Details')} <ArrowRight size={14} />
         </Link>
       </div>
     </div>

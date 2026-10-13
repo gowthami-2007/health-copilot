@@ -1,15 +1,18 @@
 import React from 'react';
 import { Pill, Edit2, Trash2, Clock, Calendar, CheckCircle, PauseCircle } from 'lucide-react';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const MedicationCard = ({ medication, onEdit, onDelete }) => {
+  const { t } = useLanguage();
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'ACTIVE':
-        return <span className="badge badge-success"><CheckCircle size={12} /> Active</span>;
+        return <span className="badge badge-success"><CheckCircle size={12} /> {t('common.active', 'Active')}</span>;
       case 'PAUSED':
         return <span className="badge badge-warning"><PauseCircle size={12} /> Paused</span>;
       default:
-        return <span className="badge badge-neutral">Completed</span>;
+        return <span className="badge badge-neutral">{t('common.completed', 'Completed')}</span>;
     }
   };
 
@@ -43,8 +46,8 @@ const MedicationCard = ({ medication, onEdit, onDelete }) => {
                 padding: '0.3rem',
                 display: 'flex',
               }}
-              title="Edit medication"
-              aria-label="Edit medication"
+              title={t('common.edit', 'Edit medication')}
+              aria-label={t('common.edit', 'Edit medication')}
             >
               <Edit2 size={15} />
             </button>
@@ -59,8 +62,8 @@ const MedicationCard = ({ medication, onEdit, onDelete }) => {
                 padding: '0.3rem',
                 display: 'flex',
               }}
-              title="Delete medication"
-              aria-label="Delete medication"
+              title={t('common.delete', 'Delete medication')}
+              aria-label={t('common.delete', 'Delete medication')}
             >
               <Trash2 size={15} />
             </button>
@@ -81,24 +84,24 @@ const MedicationCard = ({ medication, onEdit, onDelete }) => {
           color: 'var(--text-main)',
           margin: '0.4rem 0 0.85rem 0'
         }}>
-          Dosage: {medication.dosage}
+          {t('medications.dosage', 'Dosage')}: {medication.dosage}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
             <Clock size={14} color="var(--primary)" />
-            <span><strong>Schedule:</strong> {medication.frequency}</span>
+            <span><strong>{t('medications.frequency', 'Schedule')}:</strong> {medication.frequency}</span>
           </div>
 
           {medication.instructions && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', marginTop: '0.25rem', lineHeight: 1.4 }}>
-              <strong>Instructions:</strong> {medication.instructions}
+              <strong>{t('medications.instructions', 'Instructions')}:</strong> {medication.instructions}
             </p>
           )}
 
           {medication.prescribedBy && (
             <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem' }}>
-              Prescribed by: {medication.prescribedBy}
+              <strong>{t('medications.prescribedBy', 'Prescribed by')}:</strong> {medication.prescribedBy}
             </p>
           )}
         </div>

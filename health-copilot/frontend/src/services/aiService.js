@@ -16,7 +16,7 @@ export const aiService = {
   /**
    * Sends user message, attachments, and prior conversation history to POST /api/chat.
    */
-  async sendChat(message, conversationId = null, history = [], signal = null, attachments = []) {
+  async sendChat(message, conversationId = null, history = [], signal = null, attachments = [], preferredLanguage = null) {
     return await api.post(
       '/chat',
       {
@@ -25,6 +25,7 @@ export const aiService = {
         conversationId,
         history,
         attachments,
+        preferredLanguage,
       },
       signal ? { signal } : undefined
     );

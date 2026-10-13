@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Plus, Camera, FileUp, X, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import Button from '../common/Button';
 import CameraModal from './CameraModal';
+import useLanguage from '../../hooks/useLanguage';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = [
@@ -16,8 +17,9 @@ const ALLOWED_MIME_TYPES = [
 const ChatInput = ({
   onSendMessage,
   isLoading = false,
-  placeholder = 'Ask a question about your health records...',
+  placeholder = null,
 }) => {
+  const { t, isTelugu } = useLanguage();
   const [text, setText] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -315,8 +317,8 @@ const ChatInput = ({
             id="chat-attach-btn"
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            title="Attach image or document"
-            aria-label="Attach photo or document"
+            title={t('assistant.attachBtn', 'Attach image or document')}
+            aria-label={t('assistant.attachBtn', 'Attach image or document')}
             aria-expanded={isMenuOpen}
             disabled={isLoading}
             style={{
@@ -386,7 +388,7 @@ const ChatInput = ({
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <Camera size={16} color="var(--primary)" />
-                <span>Camera / Take Photo</span>
+                <span>{t('assistant.menuCamera', 'Camera / Take Photo')}</span>
               </button>
 
               <button
@@ -418,7 +420,7 @@ const ChatInput = ({
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <FileUp size={16} color="var(--accent)" />
-                <span>Upload Document / Image</span>
+                <span>{t('assistant.menuUpload', 'Upload Document / Image')}</span>
               </button>
             </div>
           )}
@@ -442,7 +444,11 @@ const ChatInput = ({
           value={text}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={attachments.length > 0 ? 'Add an optional question about the attached files...' : placeholder}
+          placeholder={
+            attachments.length > 0
+              ? t('assistant.inputPlaceholderAttached', 'Add an optional question about the attached files...')
+              : (placeholder || t('assistant.inputPlaceholder', 'Ask a question about your health records...'))
+          }
           disabled={isLoading}
           style={{
             flex: 1,
