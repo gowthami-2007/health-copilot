@@ -26,10 +26,8 @@ const Login = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [unverifiedState, setUnverifiedState] = useState(null); // { email }
-  const [resendingEmail, setResendingEmail] = useState(false);
 
-  const { user, login, googleLogin, resendVerification } = useAuth();
+  const { user, login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -37,7 +35,7 @@ const Login = () => {
   const from = rawFrom && rawFrom !== '/login' && rawFrom !== '/register' ? rawFrom : '/dashboard';
 
   React.useEffect(() => {
-    if (user && user.isEmailVerified) {
+    if (user) {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
@@ -50,7 +48,6 @@ const Login = () => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
-    setUnverifiedState(null);
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
@@ -71,13 +68,7 @@ const Login = () => {
       await login(cleanEmail, password, rememberMe);
       navigate(from, { replace: true });
     } catch (err) {
-      // Check if server indicated unverified email
-      if (err.status === 403 || err.code === 'EMAIL_NOT_VERIFIED' || err.details?.requiresVerification) {
-        setUnverifiedState({ email: cleanEmail });
-        setErrorMsg('Your email address has not been verified yet. Please verify your email before accessing your health vault.');
-      } else {
-        setErrorMsg(err.message || 'Invalid email or password.');
-      }
+      setErrorMsg(err.message || 'Invalid email or password.');
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +77,6 @@ const Login = () => {
   const handleGoogleSuccess = async (idToken) => {
     setErrorMsg('');
     setSuccessMsg('');
-    setUnverifiedState(null);
 
     try {
       setIsGoogleLoading(true);
@@ -101,22 +91,6 @@ const Login = () => {
 
   const handleGoogleError = (msg) => {
     setErrorMsg(msg);
-  };
-
-  const handleResendVerification = async () => {
-    const targetEmail = unverifiedState?.email || email.trim();
-    if (!targetEmail) return;
-
-    try {
-      setResendingEmail(true);
-      setErrorMsg('');
-      const res = await resendVerification(targetEmail);
-      setSuccessMsg(res.message || 'A fresh verification email has been sent. Please check your inbox.');
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to resend verification email.');
-    } finally {
-      setResendingEmail(false);
-    }
   };
 
   return (
@@ -178,44 +152,6 @@ const Login = () => {
             </div>
           )}
 
-          {/* Unverified Email Warning Box */}
-          {unverifiedState && (
-            <div style={{
-              padding: '1rem',
-              marginBottom: '1.25rem',
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fde68a',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              color: '#92400e',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                <AlertCircle size={16} /> Action Required: Verify Email
-              </div>
-              <p style={{ margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
-                We sent a verification link to <strong>{unverifiedState.email}</strong>.
-              </p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={handleResendVerification}
-                  disabled={resendingEmail}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  <RefreshCw size={12} className={resendingEmail ? 'spin' : ''} />
-                  {resendingEmail ? 'Sending...' : 'Resend Verification Email'}
-                </button>
-                <Link
-                  to={`/verify-email?email=${encodeURIComponent(unverifiedState.email)}`}
-                  className="btn btn-primary btn-sm"
-                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
-                >
-                  Enter 6-Digit Code
-                </Link>
-              </div>
-            </div>
-          )}
 
           {/* Google Sign-In Button */}
           <div style={{ marginBottom: '1.5rem' }}>

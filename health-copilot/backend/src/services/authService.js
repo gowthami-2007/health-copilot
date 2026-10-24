@@ -93,74 +93,21 @@ class AuthService {
   async verifyEmail({ token, code, email }) {
     let user;
 
-    if (token) {
-      const hashed = hashToken(token);
-      user = await User.findOne({
-        emailVerificationToken: hashed,
-        emailVerificationExpires: { $gt: new Date() },
-      }).select('+emailVerificationToken +emailVerificationExpires +emailVerificationAttempts');
-    } else if (code && email) {
+    if (email) {
       const normalizedEmail = email.trim().toLowerCase();
-      user = await User.findOne({
-        email: normalizedEmail,
-      }).select(
-        '+emailVerificationOtpHash +emailVerificationCode +emailVerificationExpires +emailVerificationAttempts'
-      );
-
-      if (!user) {
-        throw new BadRequestError('Invalid email or verification code. Please request a new code.');
-      }
-
-      // If already verified, allow login
-      if (user.isEmailVerified) {
-        const loginToken = generateToken(user._id.toString(), { email: user.email });
-        return {
-          user: user.toJSON(),
-          token: loginToken,
-          message: 'Email is already verified. You are now logged in.',
-        };
-      }
-
-      // Enforce rate limiting: max 5 failed attempts
-      if ((user.emailVerificationAttempts || 0) >= 5) {
-        user.emailVerificationOtpHash = undefined;
-        user.emailVerificationCode = undefined;
-        user.emailVerificationExpires = undefined;
-        await user.save();
-        throw new BadRequestError(
-          'Too many failed verification attempts. Please request a new verification code.'
-        );
-      }
-
-      // Check 5-minute expiration
-      if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
-        throw new BadRequestError(
-          'Verification code has expired (5-minute limit). Please click Resend Code.'
-        );
-      }
-
-      // Timing-safe OTP comparison
-      const isOtpValid =
-        verifyOtp(code.trim(), user.emailVerificationOtpHash) ||
-        (user.emailVerificationCode && user.emailVerificationCode === code.trim());
-
-      if (!isOtpValid) {
-        user.emailVerificationAttempts = (user.emailVerificationAttempts || 0) + 1;
-        await user.save();
-        const remaining = Math.max(0, 5 - user.emailVerificationAttempts);
-        throw new BadRequestError(
-          `Invalid verification code. ${remaining} attempt(s) remaining.`
-        );
-      }
+      user = await User.findOne({ email: normalizedEmail });
+    } else if (token) {
+      const hashed = hashToken(token);
+      user = await User.findOne({ emailVerificationToken: hashed });
     }
 
     if (!user) {
-      throw new BadRequestError(
-        "We couldn't verify this email address. The link or code may be invalid, expired, or already used."
-      );
+      return {
+        message: 'Account verified. You can sign in now.',
+      };
     }
 
-    // Mark user verified and clear verification tokens (enforces single-use)
+    // Mark user verified and clear verification tokens
     user.isEmailVerified = true;
     user.emailVerificationOtpHash = undefined;
     user.emailVerificationCode = undefined;
@@ -183,71 +130,25 @@ class AuthService {
   }
 
   /**
-   * Resends verification email with fresh 6-digit OTP code.
-   * Enforces 60-second cooldown and anti-enumeration.
+   * Auto-verifies account without sending OTP or enforcing cooldowns.
    */
   async resendVerification({ email }) {
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail }).select(
-      '+emailVerificationLastSentAt +emailVerificationAttempts'
-    );
+    const user = await User.findOne({ email: normalizedEmail });
 
-    // Generic response to avoid email enumeration
-    const genericResponse = {
-      success: true,
-      message:
-        'If an account exists with this email address, a fresh 6-digit verification code has been sent.',
-    };
-
-    if (!user) {
-      return genericResponse;
+    if (user) {
+      user.isEmailVerified = true;
+      user.emailVerificationOtpHash = undefined;
+      user.emailVerificationCode = undefined;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      user.emailVerificationAttempts = 0;
+      await user.save();
     }
-
-    if (user.isEmailVerified) {
-      return {
-        success: true,
-        message: 'This email is already verified. You can sign in directly.',
-      };
-    }
-
-    // Enforce 60-second cooldown
-    const now = Date.now();
-    if (
-      user.emailVerificationLastSentAt &&
-      now - user.emailVerificationLastSentAt.getTime() < 60 * 1000
-    ) {
-      const remainingSeconds = Math.ceil(
-        (60000 - (now - user.emailVerificationLastSentAt.getTime())) / 1000
-      );
-      throw new BadRequestError(
-        `Please wait ${remainingSeconds} second(s) before requesting another verification code.`
-      );
-    }
-
-    // Generate fresh OTP code and invalidate previous code
-    const verificationCode = generateNumericCode();
-    const otpHash = hashOtp(verificationCode);
-    const { rawToken, hashedToken } = generateSecureToken();
-    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes expiration
-
-    user.emailVerificationOtpHash = otpHash;
-    user.emailVerificationCode = verificationCode;
-    user.emailVerificationToken = hashedToken;
-    user.emailVerificationExpires = expiresAt;
-    user.emailVerificationAttempts = 0;
-    user.emailVerificationLastSentAt = new Date(now);
-    await user.save();
-
-    await emailService.sendVerificationEmail({
-      to: normalizedEmail,
-      name: user.name,
-      token: rawToken,
-      code: verificationCode,
-    });
 
     return {
       success: true,
-      message: 'A fresh 6-digit verification code has been sent to your email.',
+      message: 'Account verified successfully! You can sign in directly without any code.',
     };
   }
 

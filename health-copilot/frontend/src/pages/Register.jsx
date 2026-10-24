@@ -31,11 +31,8 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
-  const [resendNotice, setResendNotice] = useState('');
 
-  const { user, register, googleLogin, resendVerification } = useAuth();
+  const { user, register, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -147,102 +144,6 @@ const Register = () => {
   const handleGoogleError = (msg) => {
     setErrorMsg(msg);
   };
-
-  const handleResend = async () => {
-    try {
-      setResendingEmail(true);
-      setResendNotice('');
-      const res = await resendVerification(formData.email.trim());
-      setResendNotice(res.message || 'Verification email resent successfully.');
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to resend email.');
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
-  // Verification Pending Screen after Registration
-  if (isRegisteredSuccess) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '2rem 1rem',
-        background: 'radial-gradient(circle at top, #e0f2fe 0%, #f8fafc 50%)',
-      }}>
-        <div style={{ width: '100%', maxWidth: '480px' }} className="animate-fade-in">
-          <div className="card" style={{ padding: '2.5rem 2rem', textAlign: 'center', backgroundColor: '#ffffff', boxShadow: 'var(--shadow-lg)' }}>
-            <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              backgroundColor: '#e0f2fe',
-              color: '#0284c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem auto',
-            }}>
-              <Mail size={32} />
-            </div>
-
-            <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-              Verify Your Email
-            </h2>
-
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              We have sent a verification link and a 6-digit confirmation code to:
-              <br />
-              <strong style={{ color: '#0f172a' }}>{formData.email}</strong>
-            </p>
-
-            {resendNotice && (
-              <div style={{
-                padding: '0.75rem',
-                backgroundColor: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                borderRadius: '8px',
-                color: '#065f46',
-                fontSize: '0.85rem',
-                marginBottom: '1rem',
-              }}>
-                {resendNotice}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <Link
-                to={`/verify-email?email=${encodeURIComponent(formData.email)}`}
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center' }}
-              >
-                Enter 6-Digit Verification Code <ArrowRight size={16} />
-              </Link>
-
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resendingEmail}
-                className="btn btn-secondary"
-                style={{ width: '100%', justifyContent: 'center', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                <RefreshCw size={14} className={resendingEmail ? 'spin' : ''} />
-                {resendingEmail ? 'Sending...' : 'Resend Verification Email'}
-              </button>
-            </div>
-
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', margin: 0 }}>
-              Already clicked the link in your email?{' '}
-              <Link to="/login" style={{ fontWeight: 600 }}>Sign in</Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{
