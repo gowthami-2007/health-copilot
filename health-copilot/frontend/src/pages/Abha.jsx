@@ -852,7 +852,15 @@ const Abha = () => {
                         <Button
                           variant="secondary"
                           size="small"
-                          onClick={() => setPreviewDoc(doc)}
+                          onClick={() => {
+                            const patientId = doc.patientId || searchResult.patient?.id;
+                            const targetFileUrl = doc.fileUrl || (patientId ? `/api/abha/patients/${patientId}/documents/${doc.id || doc._id}/file` : null);
+                            setPreviewDoc({
+                              ...doc,
+                              patientId,
+                              fileUrl: targetFileUrl,
+                            });
+                          }}
                         >
                           <Eye size={14} style={{ marginRight: '4px' }} /> View Document
                         </Button>

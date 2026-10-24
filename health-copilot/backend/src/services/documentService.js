@@ -404,8 +404,23 @@ class DocumentService {
     // STRICT OWNER CHECK: findOne with BOTH _id and userId
     const doc = await Document.findOne({ _id: documentId, userId });
     if (!doc) {
-      const otherDoc = await Document.findById(documentId).select('_id userId');
+      const otherDoc = await Document.findById(documentId);
       if (otherDoc && otherDoc.userId.toString() !== userId.toString()) {
+        // Interoperability / ABHA: Check if requester has active patient consent
+        try {
+          const Consent = require('../models/Consent');
+          const activeConsent = await Consent.findOne({
+            requesterId: userId,
+            patientId: otherDoc.userId,
+            status: 'GRANTED',
+            validUntil: { $gt: new Date() },
+          });
+          if (activeConsent) {
+            return otherDoc;
+          }
+        } catch (consentErr) {
+          console.error('Consent check error in getDocumentById:', consentErr);
+        }
         throw new ForbiddenError('You do not have permission to access this document.');
       }
       throw new NotFoundError('Document not found');
@@ -416,7 +431,7 @@ class DocumentService {
 
   /**
    * Retrieves document and verified physical file path for secure streaming.
-   * Strictly enforces patient ownership before serving any file content.
+   * Strictly enforces patient ownership or verified consent before serving any file content.
    */
   async getDocumentFile(documentId, userId) {
     const doc = await this.getDocumentById(documentId, userId);
@@ -426,7 +441,7 @@ class DocumentService {
       // Graceful on-demand synthesis for ABDM imported records or ephemeral hosting restarts
       try {
         const { generateClinicalReportPdf } = require('../utils/pdfGenerator');
-        const userDir = path.resolve(config.uploadDir, userId.toString());
+        const userDir = path.resolve(config.uploadDir, (doc.userId || userId).toString());
         if (!fs.existsSync(userDir)) {
           fs.mkdirSync(userDir, { recursive: true });
         }
