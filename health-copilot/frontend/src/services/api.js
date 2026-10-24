@@ -8,8 +8,25 @@ export const setAuthToken = (token) => {
 
 export const getAuthToken = () => inMemoryAuthToken;
 
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // When running on Vercel (https://health-copilot-pearl.vercel.app), use relative '/api'
+  // so requests are proxied via vercel.json. This prevents Brave Shields & Safari ITP from
+  // blocking cross-origin cookies between vercel.app and onrender.com!
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname.includes('vercel.app')
+  ) {
+    return '/api';
+  }
+  return 'https://health-copilot-pv0y.onrender.com/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://health-copilot-pv0y.onrender.com/api',
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,7 +37,7 @@ const api = axios.create({
 // Request Interceptor: Attach credentials
 api.interceptors.request.use(
   (config) => {
-    // If in-memory token is present, attach Bearer header as reliable cross-domain fallback
+    // Attach in-memory token as Bearer header if available
     if (inMemoryAuthToken && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${inMemoryAuthToken}`;
     }

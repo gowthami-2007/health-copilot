@@ -8,9 +8,10 @@ export const LanguageProvider = ({ children }) => {
   const { user } = useAuth();
 
   const [language, setLanguageState] = useState(() => {
-    // Priority: stored in localStorage, or user preferredLanguage, or default 'en'
-    const stored = localStorage.getItem('health_copilot_language');
-    if (stored === 'te' || stored === 'en') return stored;
+    try {
+      const stored = localStorage.getItem('health_copilot_language');
+      if (stored === 'te' || stored === 'en') return stored;
+    } catch {}
     if (user?.preferredLanguage === 'te' || user?.preferredLanguage === 'en') {
       return user.preferredLanguage;
     }
@@ -21,7 +22,9 @@ export const LanguageProvider = ({ children }) => {
   useEffect(() => {
     if (user?.preferredLanguage && (user.preferredLanguage === 'te' || user.preferredLanguage === 'en')) {
       setLanguageState(user.preferredLanguage);
-      localStorage.setItem('health_copilot_language', user.preferredLanguage);
+      try {
+        localStorage.setItem('health_copilot_language', user.preferredLanguage);
+      } catch {}
       document.documentElement.lang = user.preferredLanguage;
     }
   }, [user?.preferredLanguage]);
@@ -33,7 +36,9 @@ export const LanguageProvider = ({ children }) => {
   const setLanguage = useCallback((lang) => {
     const validLang = lang === 'te' ? 'te' : 'en';
     setLanguageState(validLang);
-    localStorage.setItem('health_copilot_language', validLang);
+    try {
+      localStorage.setItem('health_copilot_language', validLang);
+    } catch {}
     document.documentElement.lang = validLang;
   }, []);
 

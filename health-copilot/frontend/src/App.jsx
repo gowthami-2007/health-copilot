@@ -6,7 +6,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ProfileProvider } from './context/ProfileContext';
 import AppRoutes from './routes/AppRoutes';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '109731916640-fm85fat5o1jsdtbpvlic09hmf3iaesqh.apps.googleusercontent.com';
 
 function App() {
   return (

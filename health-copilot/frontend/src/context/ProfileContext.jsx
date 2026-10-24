@@ -4,6 +4,20 @@ import useAuth from '../hooks/useAuth';
 
 const ProfileContext = createContext(null);
 
+const getSavedProfileId = () => {
+  try {
+    return localStorage.getItem('health_copilot_active_profile_id');
+  } catch {
+    return null;
+  }
+};
+
+const setSavedProfileId = (id) => {
+  try {
+    localStorage.setItem('health_copilot_active_profile_id', id);
+  } catch {}
+};
+
 export const ProfileProvider = ({ children }) => {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState([]);
@@ -26,7 +40,7 @@ export const ProfileProvider = ({ children }) => {
       setProfiles(list);
 
       // Restore saved active profile ID or default to primary/first
-      const savedId = localStorage.getItem('health_copilot_active_profile_id');
+      const savedId = getSavedProfileId();
       const found = list.find((p) => p._id === savedId);
       if (found) {
         setActiveProfile(found);
@@ -34,7 +48,7 @@ export const ProfileProvider = ({ children }) => {
         const primary = list.find((p) => p.isPrimary) || list[0] || null;
         setActiveProfile(primary);
         if (primary) {
-          localStorage.setItem('health_copilot_active_profile_id', primary._id);
+          setSavedProfileId(primary._id);
         }
       }
     } catch (err) {
@@ -56,7 +70,7 @@ export const ProfileProvider = ({ children }) => {
 
     if (profile) {
       setActiveProfile(profile);
-      localStorage.setItem('health_copilot_active_profile_id', profile._id);
+      setSavedProfileId(profile._id);
     }
   };
 
