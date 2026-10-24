@@ -17,6 +17,7 @@ export const translations = {
       wellness: 'Wellness Guidance',
       agent: 'Agent Automation',
       documents: 'Documents',
+      abha: 'ABHA Health ID',
       medications: 'Medications',
       appointments: 'Appointments',
       consultations: 'Consultations',
@@ -26,6 +27,9 @@ export const translations = {
       askAi: 'Ask Health AI',
       uploadDoc: 'Upload Document',
       langToggle: 'Language: English',
+    },
+    abha: {
+      pageTitle: 'ABHA Health Identity & Record Lookup',
     },
     trends: {
       pageTitle: 'Health Trends & Preventive Insights',
@@ -285,6 +289,7 @@ export const translations = {
       wellness: 'వెల్నెస్ సూచనలు',
       agent: 'ఏజెంట్ ఆటోమేషన్',
       documents: 'డాక్యుమెంట్లు',
+      abha: 'ABHA హెల్త్ ID',
       medications: 'మందులు',
       appointments: 'అపాయింట్‌మెంట్లు',
       consultations: 'సంప్రదింపులు',
@@ -294,6 +299,9 @@ export const translations = {
       askAi: 'AI ని అడగండి',
       uploadDoc: 'డాక్యుమెంట్ అప్‌లోడ్',
       langToggle: 'భాష: తెలుగు',
+    },
+    abha: {
+      pageTitle: 'ABHA హెల్త్ గుర్తింపు & రికార్డు శోధన',
     },
     trends: {
       pageTitle: 'హెల్త్ ట్రెండ్స్ & నివారణ సూచనలు',

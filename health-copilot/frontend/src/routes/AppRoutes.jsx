@@ -23,6 +23,7 @@ import Wellness from '../pages/Wellness';
 import AgentActivity from '../pages/AgentActivity';
 import Profile from '../pages/Profile';
 import Settings from '../pages/Settings';
+import Abha from '../pages/Abha';
 
 const AppRoutes = () => {
   return (
@@ -49,6 +50,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Documents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/abha"
+        element={
+          <ProtectedRoute>
+            <Abha />
           </ProtectedRoute>
         }
       />

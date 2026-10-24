@@ -101,6 +101,51 @@ const userSchema = new mongoose.Schema(
       enum: ['en', 'te'],
       default: 'en',
     },
+    // Application-Level Health Identifier & ABHA Interoperability
+    healthId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    healthIdType: {
+      type: String,
+      enum: ['DEMO_APPLICATION_ID', 'OFFICIAL_ABHA'],
+      default: 'DEMO_APPLICATION_ID',
+    },
+    abhaNumber: {
+      type: String,
+      default: '',
+      index: true,
+    },
+    abhaAddress: {
+      type: String,
+      default: '',
+      index: true,
+    },
+    abhaStatus: {
+      type: String,
+      enum: [
+        'DEMO_ASSIGNED',
+        'OFFICIAL_VERIFIED',
+        'OFFICIAL_NOT_LINKED',
+        'VERIFICATION_PENDING',
+        'VERIFICATION_FAILED',
+      ],
+      default: 'DEMO_ASSIGNED',
+    },
+    isAbhaVerified: {
+      type: Boolean,
+      default: false,
+    },
+    abhaLinkedAt: {
+      type: Date,
+      default: null,
+    },
+    abhaVerificationMethod: {
+      type: String,
+      default: 'DEMO_MODE',
+    },
     mockAbha: {
       abhaAddress: { type: String, default: '' },
       abhaNumber: { type: String, default: '' },
@@ -117,6 +162,49 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+const crypto = require('crypto');
+
+function generateDemoHealthId() {
+  const segment1 = crypto.randomInt(1000, 9999);
+  const segment2 = crypto.randomInt(1000, 9999);
+  return `ABHA-DEMO-${segment1}-${segment2}`;
+}
+
+// Ensure every user has a unique application-level health identifier
+userSchema.pre('save', async function (next) {
+  if (!this.healthId) {
+    let uniqueId = null;
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 10) {
+      attempts++;
+      uniqueId = generateDemoHealthId();
+      const existing = await mongoose.model('User').findOne({ healthId: uniqueId });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+    this.healthId = uniqueId || `ABHA-DEMO-${Date.now().toString().slice(-8)}`;
+  }
+  next();
+});
+
+// Static helper to generate unique health ID
+userSchema.statics.generateUniqueHealthId = async function () {
+  let uniqueId = null;
+  let isUnique = false;
+  let attempts = 0;
+  while (!isUnique && attempts < 15) {
+    attempts++;
+    uniqueId = generateDemoHealthId();
+    const existing = await this.findOne({ healthId: uniqueId });
+    if (!existing) {
+      isUnique = true;
+    }
+  }
+  return uniqueId || `ABHA-DEMO-${Date.now().toString().slice(-8)}`;
+};
 
 // Strip sensitive fields when converting to JSON
 userSchema.methods.toJSON = function () {

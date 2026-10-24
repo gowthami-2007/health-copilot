@@ -105,6 +105,7 @@ app.use('/api/family-profiles', require('./routes/patientProfileRoutes'));
 app.use('/api/trends', require('./routes/trendRoutes'));
 app.use('/api/wellness', require('./routes/wellnessRoutes'));
 app.use('/api/agent', require('./routes/agentRoutes'));
+app.use('/api/abha', require('./routes/abhaRoutes'));
 
 // 404 and Error Handler
 app.use(notFoundHandler);

@@ -16,6 +16,7 @@ import {
   Stethoscope,
   TrendingUp,
   Cpu,
+  ShieldCheck,
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
@@ -31,6 +32,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: t('nav.wellness', 'Wellness Guidance'), path: '/wellness', icon: Sparkles, badge: 'NEW' },
     { name: t('nav.agent', 'Agent Automation'), path: '/agent', icon: Cpu, badge: 'AUTO' },
     { name: t('nav.documents', 'Documents'), path: '/documents', icon: FileText },
+    { name: t('nav.abha', 'ABHA Health ID'), path: '/abha', icon: ShieldCheck, badge: 'ABDM' },
     { name: t('nav.medications', 'Medications'), path: '/medications', icon: Pill },
     { name: t('nav.appointments', 'Appointments'), path: '/appointments', icon: Calendar },
     { name: t('nav.timeline', 'Health Timeline'), path: '/timeline', icon: Clock },

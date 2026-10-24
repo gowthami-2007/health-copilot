@@ -13,6 +13,7 @@ const PAGE_TITLE_KEYS = {
   '/wellness': 'wellness.pageTitle',
   '/agent': 'agent.pageTitle',
   '/documents': 'documents.pageTitle',
+  '/abha': 'abha.pageTitle',
   '/medications': 'medications.pageTitle',
   '/appointments': 'appointments.pageTitle',
   '/timeline': 'timeline.pageTitle',
