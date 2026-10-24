@@ -1,5 +1,13 @@
 import axios from 'axios';
 
+let inMemoryAuthToken = null;
+
+export const setAuthToken = (token) => {
+  inMemoryAuthToken = token;
+};
+
+export const getAuthToken = () => inMemoryAuthToken;
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://health-copilot-pv0y.onrender.com/api',
   headers: {
@@ -9,9 +17,15 @@ const api = axios.create({
   timeout: 45000,
 });
 
-// Request Interceptor
+// Request Interceptor: Attach credentials
 api.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    // If in-memory token is present, attach Bearer header as reliable cross-domain fallback
+    if (inMemoryAuthToken && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${inMemoryAuthToken}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 
@@ -21,15 +35,6 @@ api.interceptors.response.use(
   (error) => {
     const errorData = error.response?.data;
     const message = errorData?.message || error.message || 'An unexpected error occurred';
-    const isAuthProbe = error.config?.url?.includes('/auth/me');
-
-    // On 401 Unauthorized for protected pages (excluding session check probe or public pages)
-    if (error.response?.status === 401 && !isAuthProbe) {
-      const publicPaths = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/'];
-      if (!publicPaths.includes(window.location.pathname)) {
-        window.location.href = '/login';
-      }
-    }
 
     return Promise.reject({
       message,

@@ -9,6 +9,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorMiddleware'
 const { successResponse } = require('./utils/apiResponse');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security HTTP headers (allow cross-origin iframe embedding for document preview)
 app.use(helmet({

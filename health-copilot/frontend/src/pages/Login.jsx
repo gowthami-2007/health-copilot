@@ -33,7 +33,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const rawFrom = location.state?.from?.pathname;
+  const from = rawFrom && rawFrom !== '/login' && rawFrom !== '/register' ? rawFrom : '/dashboard';
 
   React.useEffect(() => {
     if (user && user.isEmailVerified) {

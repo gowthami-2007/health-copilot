@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
+import { setAuthToken } from '../services/api';
 
 export const AuthContext = createContext(null);
 
@@ -9,20 +10,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Validate session on mount via HTTP-only cookie
+  // Validate session on mount via HTTP-only cookie and restore session
   const checkAuth = useCallback(async () => {
     try {
       const response = await authService.getMe();
-      const userData = response?.data?.user || response?.user;
+      const payload = response?.data || response;
+      const userData = payload?.user;
+      const tokenData = payload?.token;
+
       if (userData) {
         setUser(userData);
+        if (tokenData) {
+          setToken(tokenData);
+          setAuthToken(tokenData);
+        }
       } else {
         setUser(null);
+        setToken(null);
+        setAuthToken(null);
       }
-    } catch (err) {
+    } catch {
       // 401 or network error -> treat as unauthenticated
       setUser(null);
       setToken(null);
+      setAuthToken(null);
     } finally {
       setLoading(false);
     }
@@ -41,6 +52,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       if (payload.token) {
         setToken(payload.token);
+        setAuthToken(payload.token);
       }
       return userData;
     } catch (err) {
@@ -58,6 +70,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       if (payload.token) {
         setToken(payload.token);
+        setAuthToken(payload.token);
       }
       return userData;
     } catch (err) {
@@ -72,8 +85,11 @@ export const AuthProvider = ({ children }) => {
       const res = await authService.register({ name, email, password, confirmPassword });
       const payload = res.data || res;
       if (payload?.user) {
-        // Kept in pending verification state
         setUser(payload.user);
+      }
+      if (payload?.token) {
+        setToken(payload.token);
+        setAuthToken(payload.token);
       }
       return payload;
     } catch (err) {
@@ -92,6 +108,7 @@ export const AuthProvider = ({ children }) => {
       }
       if (payload?.token) {
         setToken(payload.token);
+        setAuthToken(payload.token);
       }
       return payload;
     } catch (err) {
@@ -124,7 +141,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setToken(null);
-      // Clean up any legacy items
+      setAuthToken(null);
       try {
         localStorage.removeItem('health_copilot_token');
         localStorage.removeItem('health_copilot_user');
