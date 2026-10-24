@@ -50,6 +50,7 @@ const documentSchema = new mongoose.Schema(
     },
     summary: {
       overview: { type: String, default: '' },
+      plainLanguageSummary: { type: String, default: '' },
       keyFindings: [{ type: String }],
       abnormalResults: [{ type: String }],
       possibleMeanings: { type: String, default: '' },
@@ -63,6 +64,7 @@ const documentSchema = new mongoose.Schema(
     },
     teluguSummary: {
       overview: { type: String, default: '' },
+      plainLanguageSummary: { type: String, default: '' },
       keyFindings: [{ type: String }],
       abnormalResults: [{ type: String }],
       possibleMeanings: { type: String, default: '' },

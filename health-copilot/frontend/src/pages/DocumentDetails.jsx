@@ -293,6 +293,7 @@ const DocumentDetails = () => {
               summary={document.summary}
               teluguSummary={document.teluguSummary}
               preferredLanguage={language}
+              document={document}
             />
           </div>
 

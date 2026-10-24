@@ -533,9 +533,23 @@ class DocumentService {
       verificationStatus: 'VERIFIED',
     }));
 
+    const medListStr = prescriptions.map((p) => p.medicationName).join(', ');
+    const plainLanguageSummary = `This medical prescription was issued by ${doctorName || 'your healthcare provider'}${hospitalName ? ` at ${hospitalName}` : ''}. It outlines a course of ${prescriptions.length} medication(s)${medListStr ? ` (${medListStr})` : ''} prescribed to treat your diagnosed condition. Take each medication according to the prescribed schedule (e.g. after meals as indicated), complete the recommended duration, stay well-hydrated, and consult your doctor immediately if any unusual symptoms develop.`;
+
+    const teluguSummary = {
+      overview: `ఈ ప్రిస్క్రిప్షన్ ${doctorName || 'వైద్య నిపుణులు'}${hospitalName ? ` (${hospitalName})` : ''} ద్వారా అందించబడింది. రోగి సమీక్షించి ధృవీకరించారు.`,
+      plainLanguageSummary: `ఈ వైద్య ప్రిస్క్రిప్షన్ ${doctorName || 'వైద్యులు'}${hospitalName ? ` (${hospitalName})` : ''} ద్వారా ఇవ్వబడింది. ఇందులో మీ ఆరోగ్య సమస్యల కోసం ${prescriptions.length} మందులు (${medListStr}) సూచించబడ్డాయి. డాక్టర్ నిర్దేశించిన వేళల్లో క్రమం తప్పకుండా మందులు వాడండి మరియు సమతుల్య ఆహారం తీసుకోండి.`,
+      keyFindings: parsedData.diagnosis || ['వైద్య ప్రిస్క్రిప్షన్ నమోదు చేయబడింది.'],
+      abnormalResults: [],
+      possibleMeanings: 'వైద్యుల చికిత్సా ప్రణాళిక పరిశీలించబడింది.',
+      medicinesAndInstructions: prescriptions.map((p) => `${p.medicationName}: ${p.dosage} (${p.frequency}) - ${p.instructions}`),
+      questionsForDoctor: parsedData.followUpInstructions || [],
+    };
+
     // Create summary
     const summary = {
       overview: `Prescription issued by ${doctorName || 'attending physician'}${hospitalName ? ` at ${hospitalName}` : ''}. Verified and reviewed by patient.`,
+      plainLanguageSummary,
       keyFindings: parsedData.diagnosis || ['Medical prescription registered.'],
       abnormalResults: [],
       possibleMeanings: 'Doctor-prescribed medication plan reviewed and confirmed.',
@@ -565,6 +579,7 @@ class DocumentService {
       rawOcrOutput: JSON.stringify(parsedData),
       extractedText: prescriptions.map((p) => `${p.medicationName} ${p.dosage} ${p.frequency}`).join('\n'),
       summary,
+      teluguSummary,
       structuredData: {
         patientName,
         patientAge: parseInt(parsedData.patient?.age, 10) || null,
