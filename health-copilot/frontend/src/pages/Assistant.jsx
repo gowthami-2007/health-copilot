@@ -7,9 +7,11 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import { Plus, MessageSquare, Trash2, Bot, Clock, Edit2, Check, X } from 'lucide-react';
 import Button from '../components/common/Button';
 import useLanguage from '../hooks/useLanguage';
+import useProfile from '../hooks/useProfile';
 
 const Assistant = () => {
   const { language, t, isTelugu } = useLanguage();
+  const { activeProfile } = useProfile();
   const location = useLocation();
   const initialPrompt = location.state?.initialPrompt;
 
@@ -189,7 +191,8 @@ const Assistant = () => {
         historyPayload,
         abortController.signal,
         uploadedAttachments,
-        language
+        language,
+        activeProfile?._id
       );
 
       // If a newer request was dispatched or the user clicked New Consultation, drop stale response

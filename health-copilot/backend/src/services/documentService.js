@@ -49,7 +49,7 @@ class DocumentService {
    * Creates a new document record from an uploaded file and triggers processing.
    * Strictly associates ownership with the authenticated userId.
    */
-  async uploadDocument({ userId, file, documentType = 'Other' }) {
+  async uploadDocument({ userId, file, documentType = 'Other', patientProfileId = null }) {
     if (!file) {
       throw new BadRequestError('No file provided for upload');
     }
@@ -59,6 +59,7 @@ class DocumentService {
 
     const newDoc = new Document({
       userId,
+      patientProfileId: patientProfileId || null,
       fileName: file.originalname,
       fileUrl: '/api/documents/pending/file',
       storagePath,
@@ -366,8 +367,12 @@ class DocumentService {
   /**
    * Gets all documents belonging to the authenticated user.
    */
-  async getUserDocuments(userId, { type, search, sort = 'desc' } = {}) {
+  async getUserDocuments(userId, { type, search, sort = 'desc', patientProfileId = null } = {}) {
     const query = { userId };
+
+    if (patientProfileId) {
+      query.patientProfileId = patientProfileId;
+    }
 
     if (type && type !== 'all') {
       query.documentType = type;

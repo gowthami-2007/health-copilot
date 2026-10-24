@@ -1,6 +1,8 @@
 import React from 'react';
-import { Bot, User, FileText, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Bot, User, FileText, ExternalLink, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
+import useLanguage from '../../hooks/useLanguage';
 
 const cleanContent = (text) => {
   if (!text || typeof text !== 'string') return '';
@@ -12,8 +14,18 @@ const cleanContent = (text) => {
 };
 
 const ChatMessage = ({ message }) => {
+  const { isTelugu } = useLanguage();
+  const { speak, stopSpeaking, isSpeaking } = useVoiceAssistant();
   const isUser = message.role === 'user';
   const displayContent = isUser ? message.content : cleanContent(message.content);
+
+  const handleSpeakToggle = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      speak(displayContent, { language: isTelugu ? 'te' : 'en' });
+    }
+  };
 
   return (
     <div
@@ -117,6 +129,33 @@ const ChatMessage = ({ message }) => {
         <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           {displayContent}
         </div>
+
+        {/* Listen / Read Aloud Voice Button */}
+        {!isUser && displayContent && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.45rem' }}>
+            <button
+              type="button"
+              onClick={handleSpeakToggle}
+              title={isSpeaking ? 'Stop speaking' : isTelugu ? 'వినండి (తెలుగు)' : 'Read aloud'}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isSpeaking ? '#dc2626' : 'var(--text-subtle)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.75rem',
+                padding: '0.2rem 0.4rem',
+                borderRadius: 'var(--radius-sm)',
+                transition: 'color 0.15s ease',
+              }}
+            >
+              {isSpeaking ? <VolumeX size={14} color="#dc2626" /> : <Volume2 size={14} />}
+              <span>{isSpeaking ? 'Stop' : isTelugu ? 'వినండి' : 'Listen'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Source Citations for AI Responses */}
         {!isUser && message.sources && message.sources.length > 0 && (

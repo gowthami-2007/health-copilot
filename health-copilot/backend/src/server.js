@@ -9,6 +9,8 @@ if (!fs.existsSync(config.uploadDir)) {
   fs.mkdirSync(config.uploadDir, { recursive: true });
 }
 
+const schedulerService = require('./services/schedulerService');
+
 const server = http.createServer(app);
 
 const startServer = () => {
@@ -18,15 +20,21 @@ const startServer = () => {
     console.log(`📁 Upload directory: ${config.uploadDir}`);
 
     // Connect to DB with automatic retry
-    connectDB().catch((err) => {
-      console.error('Background DB connection failed:', err.message);
-    });
+    connectDB()
+      .then(() => {
+        // Start background medication scheduler once connected
+        schedulerService.start();
+      })
+      .catch((err) => {
+        console.error('Background DB connection failed:', err.message);
+      });
   });
 };
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  schedulerService.stop();
   server.close(() => {
     console.log('Process terminated.');
     process.exit(0);
@@ -35,6 +43,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
+  schedulerService.stop();
   server.close(() => {
     console.log('Process terminated.');
     process.exit(0);

@@ -1,17 +1,52 @@
 const Medication = require('../models/Medication');
 const Timeline = require('../models/Timeline');
+const schedulerService = require('./schedulerService');
 const { NotFoundError, ForbiddenError } = require('../utils/errors');
 
 class MedicationService {
+  /**
+   * Helper to derive standard reminder times from prescription frequency
+   */
+  deriveDefaultReminderTimes(frequency = '') {
+    const f = frequency.toLowerCase();
+    if (f.includes('four') || f.includes('qid')) {
+      return ['08:00', '12:00', '16:00', '20:00'];
+    }
+    if (f.includes('three') || f.includes('thrice') || f.includes('tid')) {
+      return ['08:00', '14:00', '20:00'];
+    }
+    if (f.includes('twice') || f.includes('bd') || f.includes('bid')) {
+      return ['08:00', '20:00'];
+    }
+    if (f.includes('night') || f.includes('bedtime') || f.includes('hs')) {
+      return ['21:00'];
+    }
+    if (f.includes('afternoon') || f.includes('lunch')) {
+      return ['13:00'];
+    }
+    // Default once daily in morning
+    return ['08:00'];
+  }
+
   async createMedication(userId, data) {
+    let reminderTimes = data.reminderTimes;
+    if (!Array.isArray(reminderTimes) || reminderTimes.length === 0) {
+      reminderTimes = this.deriveDefaultReminderTimes(data.frequency);
+    }
+
+    const nextOccurrence = schedulerService.calculateNextOccurrence(reminderTimes, null);
+
     const med = await Medication.create({
       userId,
       ...data,
+      reminderTimes,
+      nextOccurrence,
     });
 
     // Create Timeline event
     await Timeline.create({
       userId,
+      patientProfileId: med.patientProfileId || null,
       eventType: 'MEDICATION',
       title: `Added Medication: ${med.name}`,
       description: `Dosage: ${med.dosage} (${med.frequency}). Instructions: ${med.instructions || 'As prescribed.'}`,
@@ -27,10 +62,13 @@ class MedicationService {
     return med;
   }
 
-  async getMedications(userId, status = null) {
+  async getMedications(userId, status = null, patientProfileId = null) {
     const query = { userId };
     if (status && status !== 'ALL') {
       query.status = status;
+    }
+    if (patientProfileId) {
+      query.patientProfileId = patientProfileId;
     }
     return await Medication.find(query).sort({ createdAt: -1 });
   }
@@ -50,9 +88,20 @@ class MedicationService {
     const med = await this.getMedicationById(medicationId, userId);
 
     Object.assign(med, updateData);
-    await med.save();
 
+    if (updateData.reminderTimes || updateData.snoozeUntil !== undefined) {
+      med.nextOccurrence = schedulerService.calculateNextOccurrence(
+        med.reminderTimes,
+        med.snoozeUntil
+      );
+    }
+
+    await med.save();
     return med;
+  }
+
+  async recordDoseAction(medicationId, userId, actionData) {
+    return await schedulerService.recordDoseAction(userId, medicationId, actionData);
   }
 
   async deleteMedication(medicationId, userId) {

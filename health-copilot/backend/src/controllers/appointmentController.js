@@ -6,6 +6,12 @@ class AppointmentController {
   async create(req, res, next) {
     try {
       const validatedData = validateAppointment(req.body);
+      if (req.body.patientProfileId) {
+        validatedData.patientProfileId = req.body.patientProfileId;
+      }
+      if (req.body.isOverdueFollowup !== undefined) {
+        validatedData.isOverdueFollowup = req.body.isOverdueFollowup;
+      }
       const apt = await appointmentService.createAppointment(req.user.id, validatedData);
       return successResponse(res, 'Appointment scheduled successfully', apt, 201);
     } catch (error) {
@@ -15,9 +21,19 @@ class AppointmentController {
 
   async getAll(req, res, next) {
     try {
-      const { status, type } = req.query;
-      const appointments = await appointmentService.getAppointments(req.user.id, status, type);
+      const { status, type, patientProfileId } = req.query;
+      const appointments = await appointmentService.getAppointments(req.user.id, status, type, patientProfileId);
       return successResponse(res, 'Appointments retrieved', { appointments }, 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getOverdue(req, res, next) {
+    try {
+      const { patientProfileId } = req.query;
+      const overdue = await appointmentService.getOverdueFollowups(req.user.id, patientProfileId);
+      return successResponse(res, 'Overdue follow-ups retrieved', { overdue }, 200);
     } catch (error) {
       next(error);
     }

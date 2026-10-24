@@ -3,13 +3,31 @@ const Medication = require('../models/Medication');
 const Appointment = require('../models/Appointment');
 const Timeline = require('../models/Timeline');
 const User = require('../models/User');
+const PatientProfile = require('../models/PatientProfile');
+const AgentAction = require('../models/AgentAction');
+const WellnessRecommendation = require('../models/WellnessRecommendation');
+const healthTrendsService = require('./healthTrendsService');
 
 class DashboardService {
-  async getDashboardData(userId) {
+  async getDashboardData(userId, patientProfileId = null) {
     // 1. Fetch user profile for customized greeting
     const user = await User.findById(userId).select('name email preferredLanguage');
 
-    // 2. Fetch counts in parallel
+    // 2. Resolve active patient profile
+    let activeProfile = null;
+    if (patientProfileId) {
+      activeProfile = await PatientProfile.findOne({ _id: patientProfileId, userId });
+    }
+    if (!activeProfile) {
+      activeProfile = await PatientProfile.findOne({ userId, isPrimary: true });
+    }
+
+    const profileFilter = activeProfile ? { patientProfileId: activeProfile._id } : {};
+
+    const now = new Date();
+    const startOfToday = new Date(new Date().setHours(0, 0, 0, 0));
+
+    // 3. Fetch counts and datasets in parallel
     const [
       documentCount,
       activeMedicationCount,
@@ -17,34 +35,59 @@ class DashboardService {
       reviewRequiredCount,
       recentDocuments,
       upcomingAppointments,
+      overdueFollowups,
       medications,
       recentTimeline,
       docsWithLabs,
+      pendingAgentActions,
+      wellnessRecommendations,
+      trends,
     ] = await Promise.all([
-      Document.countDocuments({ userId }),
-      Medication.countDocuments({ userId, status: 'ACTIVE' }),
-      Appointment.countDocuments({ userId, status: 'UPCOMING', date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
-      Document.countDocuments({ userId, 'structuredData.reviewStatus': 'REVIEW_REQUIRED' }),
-      Document.find({ userId })
+      Document.countDocuments({ userId, ...profileFilter }),
+      Medication.countDocuments({ userId, status: 'ACTIVE', ...profileFilter }),
+      Appointment.countDocuments({
+        userId,
+        status: 'UPCOMING',
+        date: { $gte: startOfToday },
+        ...profileFilter,
+      }),
+      Document.countDocuments({ userId, 'structuredData.reviewStatus': 'REVIEW_REQUIRED', ...profileFilter }),
+      Document.find({ userId, ...profileFilter })
         .sort({ createdAt: -1 })
         .limit(5)
         .select('fileName documentType status summary teluguSummary structuredData createdAt fileSize fileUrl'),
       Appointment.find({
         userId,
         status: 'UPCOMING',
-        date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        date: { $gte: startOfToday },
+        ...profileFilter,
       })
         .sort({ date: 1 })
         .limit(3),
-      Medication.find({ userId, status: 'ACTIVE' })
+      Appointment.find({
+        userId,
+        status: 'UPCOMING',
+        date: { $lt: now },
+        ...profileFilter,
+      })
+        .sort({ date: 1 })
+        .limit(3),
+      Medication.find({ userId, status: 'ACTIVE', ...profileFilter })
         .sort({ createdAt: -1 })
-        .limit(4),
-      Timeline.find({ userId })
+        .limit(5),
+      Timeline.find({ userId, ...profileFilter })
         .sort({ date: -1 })
         .limit(5),
-      Document.find({ userId, 'structuredData.labResults.0': { $exists: true } })
+      Document.find({ userId, 'structuredData.labResults.0': { $exists: true }, ...profileFilter })
         .sort({ createdAt: -1 })
         .select('structuredData.labResults structuredData.documentDate fileName documentType createdAt'),
+      AgentAction.find({ userId, status: 'PROPOSED', ...profileFilter })
+        .sort({ createdAt: -1 })
+        .limit(3),
+      WellnessRecommendation.find({ userId, status: 'ACTIVE', ...profileFilter })
+        .sort({ urgency: -1, createdAt: -1 })
+        .limit(3),
+      healthTrendsService.getTrends(userId, activeProfile?._id || null).catch(() => []),
     ]);
 
     let totalLabResults = 0;
@@ -75,7 +118,7 @@ class DashboardService {
     }
 
     // Determine greeting
-    const hour = new Date().getHours();
+    const hour = now.getHours();
     const isTe = user?.preferredLanguage === 'te';
     let greeting = isTe ? 'శుభోదయం' : 'Good morning';
     if (hour >= 12 && hour < 17) {
@@ -87,23 +130,32 @@ class DashboardService {
     return {
       user: {
         id: user?._id,
-        name: user?.name || 'Patient',
+        name: activeProfile?.name || user?.name || 'Patient',
+        relationship: activeProfile?.relationship || 'Self',
         email: user?.email,
+        profileId: activeProfile?._id || null,
       },
+      activeProfile,
       greeting,
       stats: {
         documents: documentCount,
         medications: activeMedicationCount,
         appointments: upcomingAppointmentCount,
+        overdueFollowups: overdueFollowups.length,
         totalLabResults,
         abnormalLabs: abnormalLabsCount,
         reviewRequired: reviewRequiredCount,
+        pendingAgentActions: pendingAgentActions.length,
       },
       recentDocuments,
       upcomingAppointments,
+      overdueFollowups,
       medications,
       recentTimeline,
       recentLabObservations,
+      pendingAgentActions,
+      wellnessRecommendations,
+      topTrends: trends.slice(0, 3),
     };
   }
 }

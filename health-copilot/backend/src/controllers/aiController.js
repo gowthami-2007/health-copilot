@@ -48,7 +48,7 @@ class AIController {
    */
   async chat(req, res, next) {
     try {
-      const { question, message, conversationId, history, attachments, preferredLanguage } = req.body;
+      const { question, message, conversationId, history, attachments, preferredLanguage, patientProfileId } = req.body;
       const rawText = (message || question || '').trim();
 
       if (!rawText && (!Array.isArray(attachments) || attachments.length === 0)) {
@@ -69,6 +69,7 @@ class AIController {
         history,
         attachments: Array.isArray(attachments) ? attachments : [],
         preferredLanguage: effectiveLang,
+        patientProfileId: patientProfileId || null,
       });
 
       return res.status(200).json({

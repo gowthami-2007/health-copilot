@@ -8,6 +8,12 @@ const documentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientProfile',
+      default: null,
+      index: true,
+    },
     fileName: {
       type: String,
       required: [true, 'File name is required'],

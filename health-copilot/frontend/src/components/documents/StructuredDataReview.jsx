@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, AlertTriangle, Edit3, Save, ShieldCheck, Code, Plus, Trash2, Pill } from 'lucide-react';
 import Button from '../common/Button';
 import documentService from '../../services/documentService';
@@ -15,39 +15,6 @@ const StructuredDataReview = ({ document, onUpdateSuccess }) => {
 
   const labResults = formData.labResults || [];
   const prescriptions = formData.prescriptions || [];
-
-  // AI Clinical Pharmacology & Synergy Insight Analyzer
-  const clinicalInsights = useMemo(() => {
-    if (!Array.isArray(prescriptions) || prescriptions.length === 0) return [];
-    const names = prescriptions.map((p) => (p.medicationName || '').toLowerCase());
-    const hasIron = names.some((n) => n.includes('feso4') || n.includes('iron') || n.includes('ferrous') || n.includes('fesby'));
-    const hasVitC = names.some((n) => n.includes('ascorbic') || n.includes('vitamin c') || n.includes('acad'));
-    const hasAntacid = names.some((n) => n.includes('omeprazole') || n.includes('pantoprazole') || n.includes('antacid'));
-
-    const list = [];
-    if (hasIron && hasVitC) {
-      list.push({
-        type: 'synergy',
-        title: 'Clinical Synergy Detected (Iron + Vitamin C)',
-        text: 'Ascorbic Acid (Vitamin C) significantly increases the bioavailability and gastrointestinal absorption of FeSO4 (Iron) by reducing ferric to soluble ferrous iron. Taking both together accelerates hemoglobin recovery.',
-      });
-    }
-    if (hasIron) {
-      list.push({
-        type: 'caution',
-        title: 'Dietary Interaction Caution (Iron Absorption)',
-        text: 'Do not take Ferrous Sulfate with milk, dairy, tea, coffee, or calcium antacids. Calcium and tannins inhibit iron absorption by up to 60%. Space apart by at least 2 hours.',
-      });
-    }
-    if (hasAntacid && hasIron) {
-      list.push({
-        type: 'caution',
-        title: 'Antacid Interaction Notice',
-        text: 'Acid-reducing medications elevate gastric pH, decreasing iron dissolution. Separate administration by at least 2 to 4 hours.',
-      });
-    }
-    return list;
-  }, [prescriptions]);
 
   const handleLabChange = (index, field, value) => {
     const updated = [...labResults];
@@ -413,40 +380,6 @@ const StructuredDataReview = ({ document, onUpdateSuccess }) => {
           )}
         </div>
 
-        {/* AI Clinical Synergy & Interaction Insights */}
-        {clinicalInsights.length > 0 && (
-          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {clinicalInsights.map((insight, idx) => (
-              <div
-                key={idx}
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: insight.type === 'synergy' ? '#f0fdf4' : '#fffbeb',
-                  border: `1px solid ${insight.type === 'synergy' ? '#86efac' : '#fde68a'}`,
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.6rem',
-                }}
-              >
-                {insight.type === 'synergy' ? (
-                  <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
-                ) : (
-                  <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
-                )}
-                <div>
-                  <h5 style={{ margin: '0 0 0.2rem 0', fontSize: '0.85rem', color: insight.type === 'synergy' ? '#14532d' : '#78350f', fontWeight: 700 }}>
-                    {insight.title}
-                  </h5>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: insight.type === 'synergy' ? '#166534' : '#92400e', lineHeight: 1.45 }}>
-                    {insight.text}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {prescriptions.length === 0 ? (
           <div style={{ padding: '1.5rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             No prescription medications identified in this document.
@@ -579,76 +512,76 @@ const StructuredDataReview = ({ document, onUpdateSuccess }) => {
       {/* Extracted Appointments & Consultations */}
       {((structuredData.consultations && structuredData.consultations.length > 0) ||
         (structuredData.appointments && structuredData.appointments.length > 0)) && (
-        <div className="card" style={{ border: '1px solid #c7d2fe', backgroundColor: '#faf5ff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#5b21b6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              Synced Visits & Consultations
-            </h4>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <a href="/appointments" className="btn btn-secondary btn-sm" style={{ fontSize: '0.78rem' }}>
-                Appointments Page
-              </a>
-              <a href="/consultations" className="btn btn-primary btn-sm" style={{ fontSize: '0.78rem' }}>
-                Consultations Page
-              </a>
+          <div className="card" style={{ border: '1px solid #c7d2fe', backgroundColor: '#faf5ff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#5b21b6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Synced Visits & Consultations
+              </h4>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <a href="/appointments" className="btn btn-secondary btn-sm" style={{ fontSize: '0.78rem' }}>
+                  Appointments Page
+                </a>
+                <a href="/consultations" className="btn btn-primary btn-sm" style={{ fontSize: '0.78rem' }}>
+                  Consultations Page
+                </a>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {(structuredData.consultations || []).map((con, idx) => (
+                <div key={`con-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #e9d5ff' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+                        CONSULTATION
+                      </span>
+                      <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                        {con.doctorName}
+                      </h5>
+                    </div>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Specialty: {con.specialty} • Date: {con.date && !isNaN(new Date(con.date).getTime()) ? new Date(con.date).toLocaleDateString() : 'Recorded'} • Time: {con.time}
+                    </p>
+                    {con.notes && (
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                        Notes: {con.notes}
+                      </p>
+                    )}
+                  </div>
+                  <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
+                    Synced
+                  </span>
+                </div>
+              ))}
+
+              {(structuredData.appointments || []).map((apt, idx) => (
+                <div key={`apt-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #bae6fd' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                        FOLLOW-UP APPOINTMENT
+                      </span>
+                      <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                        {apt.doctorName}
+                      </h5>
+                    </div>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Specialty: {apt.specialty} • Date: {apt.date && !isNaN(new Date(apt.date).getTime()) ? new Date(apt.date).toLocaleDateString() : 'Upcoming'} • Time: {apt.time}
+                    </p>
+                    {apt.notes && (
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                        Notes: {apt.notes}
+                      </p>
+                    )}
+                  </div>
+                  <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
+                    Scheduled
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {(structuredData.consultations || []).map((con, idx) => (
-              <div key={`con-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #e9d5ff' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#ede9fe', color: '#6d28d9' }}>
-                      CONSULTATION
-                    </span>
-                    <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
-                      {con.doctorName}
-                    </h5>
-                  </div>
-                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Specialty: {con.specialty} • Date: {con.date && !isNaN(new Date(con.date).getTime()) ? new Date(con.date).toLocaleDateString() : 'Recorded'} • Time: {con.time}
-                  </p>
-                  {con.notes && (
-                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-                      Notes: {con.notes}
-                    </p>
-                  )}
-                </div>
-                <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
-                  Synced
-                </span>
-              </div>
-            ))}
-
-            {(structuredData.appointments || []).map((apt, idx) => (
-              <div key={`apt-${idx}`} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-md)', border: '1px solid #bae6fd' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-full)', backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                      FOLLOW-UP APPOINTMENT
-                    </span>
-                    <h5 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
-                      {apt.doctorName}
-                    </h5>
-                  </div>
-                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Specialty: {apt.specialty} • Date: {apt.date && !isNaN(new Date(apt.date).getTime()) ? new Date(apt.date).toLocaleDateString() : 'Upcoming'} • Time: {apt.time}
-                  </p>
-                  {apt.notes && (
-                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-                      Notes: {apt.notes}
-                    </p>
-                  )}
-                </div>
-                <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
-                  Scheduled
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
       {/* FHIR Modal Preview */}
       {showFhirModal && (

@@ -29,16 +29,41 @@ console.log(`Discovered ${testFiles.length} test files:\n`);
 testFiles.forEach((f) => console.log(`  • ${f}`));
 console.log('\n----------------------------------------------------------------');
 
-const result = spawnSync('node', ['--test', ...testFiles], {
-  cwd: path.resolve(__dirname, '..'),
-  stdio: 'inherit',
-  env: process.env,
-});
+let failedCount = 0;
+let passedCount = 0;
 
-if (result.status !== 0) {
-  console.error('\n❌ Some test suites failed.');
-  process.exit(result.status || 1);
+for (const file of testFiles) {
+  process.stdout.write(`\n▶ Running: ${file} ... `);
+  const start = Date.now();
+  const result = spawnSync('node', ['--test', file], {
+    cwd: path.resolve(__dirname, '..'),
+    stdio: ['inherit', 'pipe', 'pipe'],
+    env: process.env,
+  });
+  const duration = Date.now() - start;
+
+  if (result.status === 0) {
+    passedCount++;
+    console.log(`✅ PASSED (${duration}ms)`);
+  } else {
+    failedCount++;
+    console.log(`❌ FAILED (${duration}ms)`);
+    if (result.stdout && result.stdout.length) {
+      console.log(result.stdout.toString());
+    }
+    if (result.stderr && result.stderr.length) {
+      console.error(result.stderr.toString());
+    }
+  }
+}
+
+console.log('\n================================================================');
+console.log(`TEST RESULTS SUMMARY: ${passedCount} suites passed, ${failedCount} suites failed.`);
+console.log('================================================================');
+
+if (failedCount > 0) {
+  process.exit(1);
 } else {
-  console.log('\n✨ ALL HEALTH COPILOT TEST SUITES PASSED CLEANLY!');
+  console.log('\n✨ ALL HEALTH COPILOT TEST SUITES PASSED CLEANLY!\n');
   process.exit(0);
 }

@@ -8,6 +8,12 @@ const medicationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientProfile',
+      default: null,
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Medication name is required'],
@@ -61,6 +67,46 @@ const medicationSchema = new mongoose.Schema(
       enum: ['AUTO_EXTRACTED', 'VERIFIED', 'MANUAL'],
       default: 'MANUAL',
     },
+    reminderTimes: [
+      {
+        type: String, // e.g. "08:00", "14:00", "20:00" in 24hr format
+        trim: true,
+      },
+    ],
+    isReminderActive: {
+      type: Boolean,
+      default: true,
+    },
+    snoozeUntil: {
+      type: Date,
+      default: null,
+    },
+    nextOccurrence: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    confirmationHistory: [
+      {
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        action: {
+          type: String,
+          enum: ['TAKEN', 'SNOOZED', 'SKIPPED'],
+          required: true,
+        },
+        scheduledTime: {
+          type: String,
+          default: '',
+        },
+        notes: {
+          type: String,
+          default: '',
+        },
+      },
+    ],
   },
   {
     timestamps: true,

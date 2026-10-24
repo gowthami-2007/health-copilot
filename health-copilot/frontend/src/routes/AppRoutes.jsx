@@ -19,6 +19,9 @@ import Medications from '../pages/Medications';
 import Appointments from '../pages/Appointments';
 import Consultations from '../pages/Consultations';
 import TimelinePage from '../pages/Timeline';
+import HealthTrends from '../pages/HealthTrends';
+import Wellness from '../pages/Wellness';
+import AgentActivity from '../pages/AgentActivity';
 import Profile from '../pages/Profile';
 import Settings from '../pages/Settings';
 
@@ -95,6 +98,30 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TimelinePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trends"
+        element={
+          <ProtectedRoute>
+            <HealthTrends />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wellness"
+        element={
+          <ProtectedRoute>
+            <Wellness />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/agent"
+        element={
+          <ProtectedRoute>
+            <AgentActivity />
           </ProtectedRoute>
         }
       />

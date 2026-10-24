@@ -230,6 +230,22 @@ This link is valid for 1 hour. If you did not request this, please ignore this e
 
     return this.sendMail({ to, subject, html, text });
   }
+
+  async sendGenericEmail({ to, subject, text, html }) {
+    const defaultHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <h2 style="color: #0284c7; margin-top: 0;">${subject}</h2>
+        <div style="line-height: 1.6; white-space: pre-line;">${text}</div>
+      </div>
+    `.trim();
+
+    return this.sendMail({
+      to,
+      subject,
+      text,
+      html: html || defaultHtml,
+    });
+  }
 }
 
 module.exports = new EmailService();

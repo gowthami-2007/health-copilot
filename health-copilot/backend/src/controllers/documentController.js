@@ -12,6 +12,7 @@ class DocumentController {
         userId: req.user.id,
         file: req.file,
         documentType,
+        patientProfileId: req.body.patientProfileId || null,
       });
 
       return successResponse(res, 'Document uploaded successfully', doc, 201);
@@ -22,11 +23,12 @@ class DocumentController {
 
   async getAll(req, res, next) {
     try {
-      const { type, search, sort } = req.query;
+      const { type, search, sort, patientProfileId } = req.query;
       const documents = await documentService.getUserDocuments(req.user.id, {
         type,
         search,
         sort,
+        patientProfileId: patientProfileId || null,
       });
 
       return successResponse(res, 'Documents retrieved successfully', { documents }, 200);

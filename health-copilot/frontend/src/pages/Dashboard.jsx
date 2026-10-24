@@ -9,11 +9,13 @@ import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import dashboardService from '../services/dashboardService';
 import useAuth from '../hooks/useAuth';
+import useProfile from '../hooks/useProfile';
 import useLanguage from '../hooks/useLanguage';
-import { Bot, ArrowRight, Sparkles, Activity, Plus } from 'lucide-react';
+import { Bot, ArrowRight, Sparkles, Activity, Plus, TrendingUp, AlertTriangle, Cpu } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { activeProfile } = useProfile();
   const { t, isTelugu } = useLanguage();
   const navigate = useNavigate();
 
@@ -26,7 +28,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await dashboardService.getDashboard();
+      const res = await dashboardService.getDashboard({ patientProfileId: activeProfile?._id });
       setData(res.data);
     } catch (err) {
       console.error('Error fetching dashboard:', err);
@@ -38,7 +40,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [activeProfile?._id]);
 
   const handleAskAI = (e) => {
     e.preventDefault();
@@ -76,6 +78,102 @@ const Dashboard = () => {
         <Loader message={isTelugu ? 'ఆరోగ్య డేటాను సమకాలీకరిస్తోంది...' : 'Synchronizing health data...'} />
       ) : (
         <>
+          {/* Overdue Follow-up Clinical Alert Banner */}
+          {data?.overdueFollowups && data.overdueFollowups.length > 0 && (
+            <div style={{
+              marginBottom: '1.5rem',
+              backgroundColor: '#fff1f2',
+              border: '1px solid #fecdd3',
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fee2e2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#9f1239' }}>
+                    Overdue Clinical Follow-up Detected ({data.overdueFollowups.length})
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#be123c' }}>
+                    {data.overdueFollowups[0].title || data.overdueFollowups[0].reason || 'Scheduled follow-up'} with {data.overdueFollowups[0].doctorName || 'Doctor'} was originally recommended for {new Date(data.overdueFollowups[0].date).toLocaleDateString()}.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/appointments')}
+                className="btn btn-sm"
+                style={{ backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 600, fontSize: '0.8rem', border: 'none', cursor: 'pointer' }}
+              >
+                Schedule Appointment <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Pending Proactive Agent Proposals Banner */}
+          {data?.pendingAgentActions && data.pendingAgentActions.length > 0 && (
+            <div style={{
+              marginBottom: '1.5rem',
+              backgroundColor: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0e7ff',
+                  color: '#4f46e5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Cpu size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#312e81' }}>
+                    Proactive Agent Proposal Ready for Review
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#4338ca' }}>
+                    {data.pendingAgentActions[0].proposal?.title || 'Proposed medication reminder schedule requires your approval.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/agent')}
+                className="btn btn-sm"
+                style={{ backgroundColor: '#4f46e5', color: '#ffffff', fontWeight: 600, fontSize: '0.8rem', border: 'none', cursor: 'pointer' }}
+              >
+                Review & Approve <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+
           {/* Health Stats Cards */}
           <HealthStats stats={data?.stats} />
 

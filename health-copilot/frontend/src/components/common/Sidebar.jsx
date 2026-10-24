@@ -14,6 +14,8 @@ import {
   X,
   Sparkles,
   Stethoscope,
+  TrendingUp,
+  Cpu,
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useLanguage from '../../hooks/useLanguage';
@@ -25,6 +27,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { name: t('nav.dashboard', 'Dashboard'), path: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.assistant', 'AI Assistant'), path: '/assistant', icon: Bot, badge: 'AI' },
+    { name: t('nav.trends', 'Health Trends'), path: '/trends', icon: TrendingUp },
+    { name: t('nav.wellness', 'Wellness Guidance'), path: '/wellness', icon: Sparkles, badge: 'NEW' },
+    { name: t('nav.agent', 'Agent Automation'), path: '/agent', icon: Cpu, badge: 'AUTO' },
     { name: t('nav.documents', 'Documents'), path: '/documents', icon: FileText },
     { name: t('nav.medications', 'Medications'), path: '/medications', icon: Pill },
     { name: t('nav.appointments', 'Appointments'), path: '/appointments', icon: Calendar },

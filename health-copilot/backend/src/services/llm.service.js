@@ -69,10 +69,11 @@ class LLMService {
    * @param {string} options.message - The current user message
    * @param {Array} options.history - Prior conversation history [{ role: 'user'|'assistant', content: string }]
    * @param {Array} options.documentContext - Optional user documents/chunks to ground answers
+   * @param {Object} options.patientContext - Verified structured lab tests, medications, appointments, and profile
    * @param {Array} options.images - Optional attached images [{ mimeType: string, base64: string }]
    * @returns {Promise<string>} Generated response text
    */
-  async generateResponse({ message, history = [], documentContext = [], images = [], preferredLanguage = 'en' }) {
+  async generateResponse({ message, history = [], documentContext = [], patientContext = null, images = [], preferredLanguage = 'en' }) {
     this.reloadConfig();
 
     if (!this.apiKey) {
@@ -83,10 +84,54 @@ class LLMService {
       throw new Error('INVALID_INPUT: Message cannot be empty');
     }
 
-    // Build system message with optional document context
+    // Build system message with optional document context and structured patient records
     let systemContent = HEALTH_SYSTEM_INSTRUCTION;
+
+    if (patientContext) {
+      systemContent += '\n\n=== VERIFIED PATIENT CLINICAL VAULT RECORDS ===\n';
+      if (patientContext.profile) {
+        systemContent += `PATIENT PROFILE: Name: ${patientContext.profile.name || 'Patient'}, Age: ${patientContext.profile.age || 'Unknown'}, Gender: ${patientContext.profile.gender || 'Unknown'}, Relationship: ${patientContext.profile.relationship || 'Self'}\n`;
+        if (patientContext.profile.chronicConditions?.length) {
+          systemContent += `Known Health Conditions: ${patientContext.profile.chronicConditions.join(', ')}\n`;
+        }
+        if (patientContext.profile.allergies?.length) {
+          systemContent += `Documented Allergies: ${patientContext.profile.allergies.join(', ')}\n`;
+        }
+      }
+
+      if (patientContext.structuredLabFacts?.length) {
+        systemContent += '\nSTRUCTURED LABORATORY TEST RESULTS (Chronological):\n';
+        patientContext.structuredLabFacts.forEach((lab, idx) => {
+          systemContent += `${idx + 1}. [${lab.date}] ${lab.testName}: ${lab.result} ${lab.unit} | Reference Range: ${lab.referenceRange || 'Not stated'} | Status: ${lab.abnormalFlag} | Source: "${lab.fileName}"\n`;
+        });
+      }
+
+      if (patientContext.structuredMedFacts?.length) {
+        systemContent += '\nACTIVE MEDICATIONS & PRESCRIPTIONS:\n';
+        patientContext.structuredMedFacts.forEach((med, idx) => {
+          systemContent += `${idx + 1}. ${med.name} ${med.dosage} - Frequency: ${med.frequency} | Instructions: ${med.instructions || 'As prescribed'} | Prescribed by: ${med.prescribedBy || 'Physician'}\n`;
+        });
+      }
+
+      if (patientContext.structuredAptFacts?.length) {
+        systemContent += '\nUPCOMING APPOINTMENTS & FOLLOW-UPS:\n';
+        patientContext.structuredAptFacts.forEach((apt, idx) => {
+          systemContent += `${idx + 1}. Dr. ${apt.doctorName} (${apt.specialty}) on ${apt.date} at ${apt.time} | Reason: ${apt.reason || 'Checkup'}${apt.isOverdue ? ' [OVERDUE FOLLOW-UP]' : ''}\n`;
+        });
+      }
+
+      systemContent += `\nSTRICT RECORD-GROUNDING & EVIDENCE RULES:
+1. Ground answers about personal health strictly and accurately on the verified patient records above.
+2. For specific test inquiries (e.g. HbA1c, glucose, lipids, blood pressure, hemoglobin), state the exact measurement, unit, report date, source document name, and reference range listed in the report.
+3. When comparing changes over time (e.g. "What was my previous result?" or "How has it changed?"), reference the prior chronological entries accurately.
+4. If the user asks about a test, prescription, diagnosis, or appointment that is NOT listed in their medical vault above, clearly and honestly state:
+   "I couldn't find a [test/medication] result in your available medical records. You can upload the report if you have one."
+   NEVER invent, guess, or hallucinate lab values, appointments, dosages, or source citations.
+5. Healthcare Safety: Never diagnose diseases, prescribe medication, or tell the user to stop or alter prescribed medicines. For urgent symptoms, direct them to emergency services immediately.`;
+    }
+
     if (documentContext && documentContext.length > 0) {
-      systemContent += '\n\nAUTHORIZED USER HEALTH RECORDS CONTEXT:\n' +
+      systemContent += '\n\nATTACHED / RELEVANT DOCUMENT EXCERPTS:\n' +
         documentContext.map((d, i) => `[Document ${i + 1}: ${d.fileName || 'Report'}]\n${d.text || d.chunkText || d.extractedText || ''}`).join('\n\n');
     }
 

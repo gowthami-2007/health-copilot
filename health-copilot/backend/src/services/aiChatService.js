@@ -4,6 +4,9 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Document = require('../models/Document');
 const User = require('../models/User');
+const Medication = require('../models/Medication');
+const Appointment = require('../models/Appointment');
+const PatientProfile = require('../models/PatientProfile');
 const llmService = require('./llm.service');
 const documentService = require('./documentService');
 const { processDocumentFile } = require('../../../document-service/src/processing/documentProcessor');
@@ -68,7 +71,7 @@ class AIChatService {
   /**
    * Sends a user query to the real LLM pipeline with multi-turn history & user document context.
    */
-  async sendMessage({ userId, conversationId, question, message, history = [], attachments = [], preferredLanguage = null }) {
+  async sendMessage({ userId, conversationId, question, message, history = [], attachments = [], preferredLanguage = null, patientProfileId = null }) {
     const rawQuery = (message || question || '').trim();
 
     if (!rawQuery && (!Array.isArray(attachments) || attachments.length === 0)) {
@@ -92,6 +95,10 @@ class AIChatService {
     if (userId) {
       const defaultTitle = effectiveLang === 'te' ? 'కొత్త సంప్రదింపు' : 'New Consultation';
       conversation = await this.getOrCreateConversation(userId, conversationId, defaultTitle);
+      if (patientProfileId && !conversation.patientProfileId) {
+        conversation.patientProfileId = patientProfileId;
+        await conversation.save().catch(() => {});
+      }
     }
 
     // 2. Build multi-turn conversation context
@@ -178,6 +185,7 @@ class AIChatService {
 
           if (extractedText) {
             attachmentDocumentContext.push({
+              documentId: docRecord._id,
               fileName,
               documentType: docRecord.documentType || 'Uploaded Document',
               text: extractedText.substring(0, 3000),
@@ -187,19 +195,31 @@ class AIChatService {
       }
     }
 
-    // 4. Fetch user's background processed medical documents if user is logged in
+    // 4. Fetch user's background processed medical documents & structured facts
     let documentContext = [...attachmentDocumentContext];
+    let patientContext = null;
+    let richSources = [];
+
     if (userId) {
-      const userDocs = await Document.find({
-        userId,
-        status: 'PROCESSED',
-      })
+      // Resolve patient profile if specified
+      let profileDoc = null;
+      const targetProfileId = patientProfileId || conversation?.patientProfileId || null;
+      if (targetProfileId) {
+        profileDoc = await PatientProfile.findOne({ _id: targetProfileId, userId });
+      }
+      if (!profileDoc) {
+        profileDoc = await PatientProfile.findOne({ userId, isPrimary: true });
+      }
+
+      const docQuery = { userId, status: 'PROCESSED' };
+      if (targetProfileId) docQuery.patientProfileId = targetProfileId;
+
+      const userDocs = await Document.find(docQuery)
         .sort({ createdAt: -1 })
-        .limit(5)
-        .select('fileName documentType extractedText createdAt');
+        .limit(10)
+        .select('fileName documentType extractedText structuredData createdAt');
 
       for (const doc of userDocs) {
-        // avoid duplicating attachment if already in context
         if (!documentContext.some((d) => d.fileName === doc.fileName)) {
           documentContext.push({
             documentId: doc._id,
@@ -209,6 +229,86 @@ class AIChatService {
           });
         }
       }
+
+      // Collect structured laboratory facts
+      const structuredLabFacts = [];
+      for (const doc of userDocs) {
+        const docDate = (doc.structuredData?.documentDate || doc.createdAt).toISOString().split('T')[0];
+        const labResults = doc.structuredData?.labResults || [];
+        for (const lab of labResults) {
+          structuredLabFacts.push({
+            documentId: doc._id,
+            fileName: doc.fileName,
+            date: docDate,
+            testName: lab.testName,
+            result: lab.result,
+            numericValue: lab.numericValue,
+            unit: lab.unit,
+            referenceRange: lab.referenceRange,
+            abnormalFlag: lab.abnormalFlag,
+          });
+        }
+      }
+
+      // Sort chronological ascending
+      structuredLabFacts.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Active medications
+      const medQuery = { userId, status: 'ACTIVE' };
+      if (targetProfileId) medQuery.patientProfileId = targetProfileId;
+      const activeMeds = await Medication.find(medQuery).sort({ createdAt: -1 });
+      const structuredMedFacts = activeMeds.map((m) => ({
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        instructions: m.instructions,
+        prescribedBy: m.prescribedBy,
+      }));
+
+      // Upcoming appointments & overdue follow-ups
+      const aptQuery = { userId, status: 'UPCOMING' };
+      if (targetProfileId) aptQuery.patientProfileId = targetProfileId;
+      const upcomingApts = await Appointment.find(aptQuery).sort({ date: 1 }).limit(5);
+      const structuredAptFacts = upcomingApts.map((a) => ({
+        doctorName: a.doctorName,
+        specialty: a.specialty,
+        date: a.date ? a.date.toISOString().split('T')[0] : '',
+        time: a.time,
+        reason: a.reason,
+        isOverdue: a.isOverdueFollowup || (a.date && new Date(a.date) < new Date()),
+      }));
+
+      patientContext = {
+        profile: profileDoc ? {
+          name: profileDoc.name,
+          age: profileDoc.dateOfBirth ? Math.floor((new Date() - new Date(profileDoc.dateOfBirth)) / (365.25 * 24 * 3600 * 1000)) : null,
+          gender: profileDoc.gender,
+          relationship: profileDoc.relationship,
+          chronicConditions: profileDoc.chronicConditions,
+          allergies: profileDoc.allergies,
+        } : null,
+        structuredLabFacts,
+        structuredMedFacts,
+        structuredAptFacts,
+      };
+
+      // Populate rich sources with verified document records
+      richSources = documentContext.map((d) => {
+        // Find matching lab test in this document if any
+        const matchingLab = structuredLabFacts.find((l) => String(l.documentId) === String(d.documentId));
+        return {
+          documentId: d.documentId || null,
+          fileName: d.fileName,
+          reportDate: matchingLab?.date || null,
+          testName: matchingLab?.testName || null,
+          result: matchingLab?.result || null,
+          unit: matchingLab?.unit || null,
+          referenceRange: matchingLab?.referenceRange || null,
+          abnormalFlag: matchingLab?.abnormalFlag || null,
+        };
+      });
+    } else {
+      richSources = documentContext.map((d) => ({ documentId: d.documentId || null, fileName: d.fileName }));
     }
 
     const effectiveQuery = rawQuery || (processedAttachments.length > 0 ? `Please analyze the attached ${processedAttachments.map(a => a.fileName).join(', ')}.` : 'Hello');
@@ -224,41 +324,39 @@ class AIChatService {
       });
     }
 
-    // 6. Invoke Real LLM Service
+    // 6. Invoke Real LLM Service with structured patient records
     let generatedAnswer = '';
     try {
       generatedAnswer = await llmService.generateResponse({
         message: effectiveQuery,
         history: formattedHistory,
         documentContext,
+        patientContext,
         images: attachmentImages,
         preferredLanguage: effectiveLang,
       });
     } catch (llmError) {
       console.error('LLM generation error in AIChatService:', llmError.message);
-      // Clean up orphaned user message so it doesn't leave an unanswered prompt in DB
       if (userMsg && userMsg._id) {
         await Message.findByIdAndDelete(userMsg._id).catch(() => {});
       }
-      // Clean, user-facing error message without exposing secrets
       if (llmError.message.includes('AI_CONFIG_MISSING')) {
         throw new Error('The AI service is not configured. Please set AI_API_KEY in the backend environment.');
       }
       throw new Error(effectiveLang === 'te' ? 'AI సేవ తాత్కాలికంగా అందుబాటులో లేదు. దయచేసి మళ్ళీ ప్రయత్నించండి.' : 'The AI service is temporarily unavailable. Please try again.');
     }
 
-    // 7. Record assistant message in DB
+    // 7. Record assistant message in DB with rich source citations
     let assistantMsg = null;
     if (conversation) {
       assistantMsg = await Message.create({
         conversationId: conversation._id,
         role: 'assistant',
         content: generatedAnswer,
-        sources: documentContext.map((d) => ({ documentId: d.documentId || null, fileName: d.fileName })),
+        sources: richSources,
       });
 
-      // 8. Dynamic Title Generation:
-      // If the conversation still has a default or un-customized title, generate a meaningful 3-7 word title
+      // 8. Dynamic Title Generation
       if (!conversation.isCustomTitle) {
         try {
           const generatedTitle = await llmService.generateConversationTitle(effectiveQuery, generatedAnswer, effectiveLang);
@@ -268,7 +366,6 @@ class AIChatService {
           }
         } catch (titleErr) {
           console.warn('Non-blocking title generation error:', titleErr.message);
-          // Retain intelligent heuristic title without breaking
           if (!conversation.title || conversation.title === 'New Consultation' || conversation.title === 'Health Consultation' || conversation.title === 'కొత్త సంప్రదింపు' || conversation.title === 'ఆరోగ్య సంప్రదింపు') {
             conversation.title = llmService.heuristicFallbackTitle(effectiveQuery, effectiveLang);
             conversation.isCustomTitle = true;
@@ -286,7 +383,7 @@ class AIChatService {
       message: generatedAnswer,
       userMessage: userMsg || { role: 'user', content: effectiveQuery, attachments: processedAttachments },
       assistantMessage: assistantMsg || { role: 'assistant', content: generatedAnswer },
-      sources: documentContext.map((d) => ({ documentId: d.documentId || null, fileName: d.fileName })),
+      sources: richSources,
     };
   }
 

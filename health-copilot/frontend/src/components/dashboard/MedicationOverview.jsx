@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Pill, ArrowRight, Sun, Moon, Clock } from 'lucide-react';
 import useLanguage from '../../hooks/useLanguage';
+import medicationService from '../../services/medicationService';
 
 const MedicationOverview = ({ medications = [] }) => {
   const { t, tClin, isTelugu } = useLanguage();
@@ -115,6 +116,57 @@ const MedicationOverview = ({ medications = [] }) => {
                     {tClin(med.instructions)}
                   </p>
                 )}
+                {/* Dose Actions */}
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.45rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        await medicationService.recordAction(med._id, 'TAKEN');
+                        alert(`Marked ${med.name} dose as taken!`);
+                      } catch (err) {
+                        alert(err.message || 'Action failed');
+                      }
+                    }}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      color: '#059669',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Take Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        await medicationService.recordAction(med._id, 'SNOOZED', 15);
+                        alert(`Snoozed ${med.name} for 15 minutes.`);
+                      } catch (err) {
+                        alert(err.message || 'Action failed');
+                      }
+                    }}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      color: '#b45309',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Snooze
+                  </button>
+                </div>
               </div>
             </div>
           ))}

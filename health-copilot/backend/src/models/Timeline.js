@@ -8,6 +8,12 @@ const timelineSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientProfile',
+      default: null,
+      index: true,
+    },
     eventType: {
       type: String,
       enum: ['DOCUMENT', 'APPOINTMENT', 'MEDICATION', 'NOTE', 'LAB_RESULT'],

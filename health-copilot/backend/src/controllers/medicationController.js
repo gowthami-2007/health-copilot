@@ -6,6 +6,12 @@ class MedicationController {
   async create(req, res, next) {
     try {
       const validatedData = validateMedication(req.body);
+      if (req.body.patientProfileId) {
+        validatedData.patientProfileId = req.body.patientProfileId;
+      }
+      if (req.body.reminderTimes) {
+        validatedData.reminderTimes = req.body.reminderTimes;
+      }
       const med = await medicationService.createMedication(req.user.id, validatedData);
       return successResponse(res, 'Medication added successfully', med, 201);
     } catch (error) {
@@ -15,8 +21,8 @@ class MedicationController {
 
   async getAll(req, res, next) {
     try {
-      const { status } = req.query;
-      const medications = await medicationService.getMedications(req.user.id, status);
+      const { status, patientProfileId } = req.query;
+      const medications = await medicationService.getMedications(req.user.id, status, patientProfileId);
       return successResponse(res, 'Medications retrieved', { medications }, 200);
     } catch (error) {
       next(error);
@@ -40,6 +46,20 @@ class MedicationController {
         req.body
       );
       return successResponse(res, 'Medication updated successfully', updated, 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async recordAction(req, res, next) {
+    try {
+      const { action, scheduledTime, notes, snoozeMinutes } = req.body;
+      const updated = await medicationService.recordDoseAction(
+        req.params.id,
+        req.user.id,
+        { action, scheduledTime, notes, snoozeMinutes }
+      );
+      return successResponse(res, `Medication marked as ${action.toLowerCase()}`, updated, 200);
     } catch (error) {
       next(error);
     }

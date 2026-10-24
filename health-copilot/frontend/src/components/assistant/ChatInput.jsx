@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Camera, FileUp, X, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Send, Plus, Camera, FileUp, X, FileText, Image as ImageIcon, AlertCircle, Mic, MicOff } from 'lucide-react';
 import Button from '../common/Button';
 import CameraModal from './CameraModal';
 import useLanguage from '../../hooks/useLanguage';
+import { useVoiceAssistant } from '../../hooks/useVoiceAssistant';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = [
@@ -25,6 +26,25 @@ const ChatInput = ({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [attachments, setAttachments] = useState([]); // [{ file, previewUrl, fileName, fileType, fileSize, attachmentType }]
   const [validationError, setValidationError] = useState(null);
+
+  const { startListening, stopListening, isListening } = useVoiceAssistant();
+
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening({
+        language: isTelugu ? 'te' : 'en',
+        onTranscript: (spoken) => {
+          setText(spoken);
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+          }
+        },
+      });
+    }
+  };
 
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -464,6 +484,30 @@ const ChatInput = ({
             backgroundColor: 'transparent',
           }}
         />
+
+        {/* Voice Speech-to-Text Button */}
+        <button
+          type="button"
+          id="assistant-voice-btn"
+          onClick={handleVoiceToggle}
+          title={isListening ? 'Stop listening' : isTelugu ? 'తెలుగులో మాట్లాడండి' : 'Speak your question'}
+          style={{
+            backgroundColor: isListening ? '#fee2e2' : 'transparent',
+            border: isListening ? '1px solid #ef4444' : '1px solid var(--border-light)',
+            color: isListening ? '#dc2626' : 'var(--text-muted)',
+            borderRadius: 'var(--radius-md)',
+            width: '38px',
+            height: '38px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+        </button>
 
         {/* Send Button */}
         <Button

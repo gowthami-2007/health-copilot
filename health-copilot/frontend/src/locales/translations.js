@@ -13,6 +13,9 @@ export const translations = {
       mainMenu: 'Main Menu',
       dashboard: 'Dashboard',
       assistant: 'AI Assistant',
+      trends: 'Health Trends',
+      wellness: 'Wellness Guidance',
+      agent: 'Agent Automation',
       documents: 'Documents',
       medications: 'Medications',
       appointments: 'Appointments',
@@ -23,6 +26,15 @@ export const translations = {
       askAi: 'Ask Health AI',
       uploadDoc: 'Upload Document',
       langToggle: 'Language: English',
+    },
+    trends: {
+      pageTitle: 'Health Trends & Preventive Insights',
+    },
+    wellness: {
+      pageTitle: 'Personalized Wellness Guidance',
+    },
+    agent: {
+      pageTitle: 'Autonomous Agent Activity & Audit Trail',
     },
     common: {
       save: 'Save',
@@ -269,6 +281,9 @@ export const translations = {
       mainMenu: 'ప్రధాన మెనూ',
       dashboard: 'డాష్‌బోర్డ్',
       assistant: 'AI అసిస్టెంట్',
+      trends: 'హెల్త్ ట్రెండ్స్',
+      wellness: 'వెల్నెస్ సూచనలు',
+      agent: 'ఏజెంట్ ఆటోమేషన్',
       documents: 'డాక్యుమెంట్లు',
       medications: 'మందులు',
       appointments: 'అపాయింట్‌మెంట్లు',
@@ -279,6 +294,15 @@ export const translations = {
       askAi: 'AI ని అడగండి',
       uploadDoc: 'డాక్యుమెంట్ అప్‌లోడ్',
       langToggle: 'భాష: తెలుగు',
+    },
+    trends: {
+      pageTitle: 'హెల్త్ ట్రెండ్స్ & నివారణ సూచనలు',
+    },
+    wellness: {
+      pageTitle: 'వ్యక్తిగత వెల్నెస్ మార్గదర్శకత్వం',
+    },
+    agent: {
+      pageTitle: 'ఏజెంట్ ఆటోమేషన్ & ఆడిట్ లాగ్',
     },
     common: {
       save: 'సేవ్ చేయండి',

@@ -7,15 +7,17 @@ class TimelineService {
   /**
    * Generates a comprehensive, chronological health timeline for a patient.
    */
-  async getTimeline(userId) {
+  async getTimeline(userId, patientProfileId = null) {
+    const profileFilter = patientProfileId ? { patientProfileId } : {};
+
     // 1. Fetch direct timeline records
-    const timelineEvents = await Timeline.find({ userId }).sort({ date: -1 });
+    const timelineEvents = await Timeline.find({ userId, ...profileFilter }).sort({ date: -1 });
 
     // 2. Fetch documents, appointments, medications to ensure complete chronological sync
     const [docs, appts, meds] = await Promise.all([
-      Document.find({ userId }).select('fileName documentType createdAt status'),
-      Appointment.find({ userId }).select('doctorName specialty date time status'),
-      Medication.find({ userId }).select('name dosage frequency startDate status'),
+      Document.find({ userId, ...profileFilter }).select('fileName documentType createdAt status'),
+      Appointment.find({ userId, ...profileFilter }).select('doctorName specialty date time status'),
+      Medication.find({ userId, ...profileFilter }).select('name dosage frequency startDate status'),
     ]);
 
     const combinedEvents = [...timelineEvents.map((t) => ({

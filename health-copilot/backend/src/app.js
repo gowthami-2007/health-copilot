@@ -95,6 +95,10 @@ app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/timeline', require('./routes/timelineRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
+app.use('/api/family-profiles', require('./routes/patientProfileRoutes'));
+app.use('/api/trends', require('./routes/trendRoutes'));
+app.use('/api/wellness', require('./routes/wellnessRoutes'));
+app.use('/api/agent', require('./routes/agentRoutes'));
 
 // 404 and Error Handler
 app.use(notFoundHandler);

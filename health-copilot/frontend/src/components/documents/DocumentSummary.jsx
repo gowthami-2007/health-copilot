@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Sparkles,
   HelpCircle,
@@ -12,33 +12,10 @@ import {
   CheckCircle,
   FileText,
   Info,
-  Volume2,
-  VolumeX,
-  Printer,
 } from 'lucide-react';
-import { useLanguage } from '../../hooks/useLanguage';
 
-const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage }) => {
-  const { language } = useLanguage();
-  const [currentLang, setCurrentLang] = useState(preferredLanguage || language || 'en');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
-  useEffect(() => {
-    if (preferredLanguage) {
-      setCurrentLang(preferredLanguage);
-    } else if (language) {
-      setCurrentLang(language);
-    }
-  }, [preferredLanguage, language]);
-
-  // Clean up speech synthesis when component unmounts or language changes
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [currentLang]);
+const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage = 'en' }) => {
+  const [currentLang, setCurrentLang] = useState(preferredLanguage || 'en');
 
   // Select active summary payload
   const activeSummary = currentLang === 'te' && teluguSummary?.overview
@@ -62,45 +39,9 @@ const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage
   const displayFindings = (keyFindings && keyFindings.length > 0) ? keyFindings : keyInformation;
   const displayQuestions = (questionsForDoctor && questionsForDoctor.length > 0) ? questionsForDoctor : doctorQuestions;
 
-  const handleToggleSpeak = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      alert('Speech synthesis is not supported on this browser.');
-      return;
-    }
-
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    const textToRead = `${overview || ''}. ${
-      displayFindings.length > 0
-        ? (currentLang === 'te' ? 'ముఖ్యమైన అంశాలు: ' : 'Key Findings: ') + displayFindings.slice(0, 3).join('. ')
-        : ''
-    }`;
-
-    const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.lang = currentLang === 'te' ? 'te-IN' : 'en-US';
-    utterance.rate = 0.95;
-
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const handlePrintPassport = () => {
-    if (typeof window !== 'undefined') {
-      window.print();
-    }
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Control Bar: Language Switcher, Voice Readout, and Print Passport */}
+      {/* Language Switcher Bar */}
       <div
         style={{
           display: 'flex',
@@ -111,8 +52,6 @@ const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--border-light)',
           boxShadow: 'var(--shadow-sm)',
-          flexWrap: 'wrap',
-          gap: '0.6rem',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', fontSize: '0.875rem', fontWeight: 600 }}>
@@ -120,14 +59,10 @@ const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage
           <span>Summary Language / సారాంశ భాష:</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
           <button
             type="button"
-            onClick={() => {
-              if (isSpeaking && typeof window !== 'undefined') window.speechSynthesis.cancel();
-              setIsSpeaking(false);
-              setCurrentLang('en');
-            }}
+            onClick={() => setCurrentLang('en')}
             style={{
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-sm)',
@@ -145,11 +80,7 @@ const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage
 
           <button
             type="button"
-            onClick={() => {
-              if (isSpeaking && typeof window !== 'undefined') window.speechSynthesis.cancel();
-              setIsSpeaking(false);
-              setCurrentLang('te');
-            }}
+            onClick={() => setCurrentLang('te')}
             style={{
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-sm)',
@@ -163,54 +94,6 @@ const DocumentSummary = ({ summary = {}, teluguSummary = null, preferredLanguage
             }}
           >
             తెలుగు (Telugu)
-          </button>
-
-          {/* Voice Readout Button */}
-          <button
-            type="button"
-            onClick={handleToggleSpeak}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.35rem 0.8rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid #93c5fd',
-              backgroundColor: isSpeaking ? '#dbeafe' : '#eff6ff',
-              color: '#1d4ed8',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title={isSpeaking ? 'Stop audio readout' : 'Listen to clinical summary aloud'}
-          >
-            {isSpeaking ? <VolumeX size={15} color="#dc2626" /> : <Volume2 size={15} color="#1d4ed8" />}
-            <span>{isSpeaking ? (currentLang === 'te' ? 'ఆపండి' : 'Stop') : (currentLang === 'te' ? 'వినండి' : 'Listen')}</span>
-          </button>
-
-          {/* Print Clinical Summary */}
-          <button
-            type="button"
-            onClick={handlePrintPassport}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.35rem 0.8rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-light)',
-              backgroundColor: '#f8fafc',
-              color: 'var(--text-main)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title="Print doctor visit summary / PDF"
-          >
-            <Printer size={15} color="var(--text-muted)" />
-            <span>{currentLang === 'te' ? 'ప్రింట్' : 'Print'}</span>
           </button>
         </div>
       </div>

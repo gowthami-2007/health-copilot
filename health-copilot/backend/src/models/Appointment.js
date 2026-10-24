@@ -8,6 +8,17 @@ const appointmentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientProfile',
+      default: null,
+      index: true,
+    },
+    isOverdueFollowup: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     doctorName: {
       type: String,
       required: [true, 'Doctor name is required'],

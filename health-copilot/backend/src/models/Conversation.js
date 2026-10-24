@@ -8,6 +8,12 @@ const conversationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PatientProfile',
+      default: null,
+      index: true,
+    },
     title: {
       type: String,
       default: 'Health Consultation',

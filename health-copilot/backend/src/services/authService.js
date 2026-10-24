@@ -28,12 +28,20 @@ class AuthService {
     // Hash password securely
     const hashedPassword = await hashPassword(password);
 
+    // Generate verification code and token
+    const { rawToken, hashedToken } = generateSecureToken();
+    const verificationCode = generateNumericCode();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     // Create user in verified state directly
     const newUser = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
       isEmailVerified: true,
+      emailVerificationToken: hashedToken,
+      emailVerificationCode: verificationCode,
+      emailVerificationExpires: expiresAt,
       authProvider: 'local',
     });
 
@@ -70,24 +78,6 @@ class AuthService {
     }
 
     if (!user) {
-      // Check if user is already verified
-      if (email) {
-        const alreadyVerified = await User.findOne({
-          email: email.trim().toLowerCase(),
-          isEmailVerified: true,
-        });
-        if (alreadyVerified) {
-          const loginToken = generateToken(alreadyVerified._id.toString(), {
-            email: alreadyVerified.email,
-          });
-          return {
-            user: alreadyVerified.toJSON(),
-            token: loginToken,
-            message: 'Your email has already been verified. Welcome back!',
-          };
-        }
-      }
-
       throw new BadRequestError(
         "We couldn't verify this email address. The link or code may be invalid, expired, or already used. Please check the address or try another email."
       );
@@ -121,14 +111,6 @@ class AuthService {
       throw new NotFoundError(
         "We couldn't verify this email address. Please check the address or try another email."
       );
-    }
-
-    if (user.isEmailVerified) {
-      return {
-        success: true,
-        alreadyVerified: true,
-        message: 'This email is already verified. Please sign in.',
-      };
     }
 
     // Generate new token & code

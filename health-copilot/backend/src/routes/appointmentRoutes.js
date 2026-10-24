@@ -7,6 +7,7 @@ router.use(protect);
 
 router.post('/', (req, res, next) => appointmentController.create(req, res, next));
 router.get('/', (req, res, next) => appointmentController.getAll(req, res, next));
+router.get('/overdue', (req, res, next) => appointmentController.getOverdue(req, res, next));
 router.get('/:id', (req, res, next) => appointmentController.getById(req, res, next));
 router.put('/:id', (req, res, next) => appointmentController.update(req, res, next));
 router.delete('/:id', (req, res, next) => appointmentController.delete(req, res, next));
