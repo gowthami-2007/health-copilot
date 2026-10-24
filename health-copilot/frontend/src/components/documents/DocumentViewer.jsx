@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink, Download, FileText, Image } from 'lucide-react';
 import Button from '../common/Button';
 import { getAuthToken, getBaseUrl } from '../../services/api';
 
 const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
-  const isPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
-  const isImage = fileType?.includes('image') || /\.(png|jpe?g)$/i.test(fileName || '');
+  const isDeclaredPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
+  const [viewAsPdf, setViewAsPdf] = useState(isDeclaredPdf);
 
   // Obtain current session's JWT token (support in-memory and persistent storage)
   const token = getAuthToken() || localStorage.getItem('health_copilot_token') || '';
@@ -42,9 +42,9 @@ const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
         borderBottom: '1px solid var(--border-light)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {isPdf ? <FileText size={18} color="#dc2626" /> : <Image size={18} color="var(--primary)" />}
+          {viewAsPdf ? <FileText size={18} color="#dc2626" /> : <Image size={18} color="var(--primary)" />}
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>
-            Original Document Preview
+            Original Document Preview {viewAsPdf && '(Clinical PDF Report)'}
           </span>
         </div>
 
@@ -81,7 +81,7 @@ const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
         minHeight: '450px',
         position: 'relative',
       }}>
-        {isPdf ? (
+        {viewAsPdf ? (
           <object
             data={`${viewUrl}#toolbar=0`}
             type="application/pdf"
@@ -108,20 +108,16 @@ const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
               </div>
             </iframe>
           </object>
-        ) : isImage ? (
+        ) : (
           <img
             src={viewUrl}
             alt={fileName}
+            onError={() => {
+              // Automatically fallback to PDF viewer when image fails (e.g. backend responded with synthesized PDF)
+              setViewAsPdf(true);
+            }}
             style={{ maxWidth: '100%', maxHeight: '550px', objectFit: 'contain', padding: '0.5rem' }}
           />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <FileText size={48} color="var(--text-subtle)" style={{ marginBottom: '0.5rem' }} />
-            <p>Preview not directly supported in this browser.</p>
-            <a href={downloadUrl} download className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }}>
-              <Download size={14} /> Download File
-            </a>
-          </div>
         )}
       </div>
     </div>

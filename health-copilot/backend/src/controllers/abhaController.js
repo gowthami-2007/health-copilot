@@ -118,8 +118,14 @@ class AbhaController {
         documentId
       );
 
-      res.setHeader('Content-Type', doc.fileType || 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.fileName)}"`);
+      const contentType = doc.fileType || 'application/pdf';
+      const isPdf = contentType.includes('pdf') || filePath.endsWith('.pdf');
+      const safeFileName = isPdf && !doc.fileName?.toLowerCase().endsWith('.pdf')
+        ? `${doc.fileName ? doc.fileName.replace(/\.[^.]+$/, '') : 'document'}.pdf`
+        : doc.fileName;
+
+      res.setHeader('Content-Type', isPdf ? 'application/pdf' : contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(safeFileName)}"`);
       res.removeHeader('X-Frame-Options');
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Cache-Control', 'private, max-age=86400');
