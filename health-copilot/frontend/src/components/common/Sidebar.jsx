@@ -33,7 +33,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: t('nav.documents', 'Documents'), path: '/documents', icon: FileText },
     { name: t('nav.medications', 'Medications'), path: '/medications', icon: Pill },
     { name: t('nav.appointments', 'Appointments'), path: '/appointments', icon: Calendar },
-    { name: t('nav.consultations', 'Consultations'), path: '/consultations', icon: Stethoscope },
     { name: t('nav.timeline', 'Health Timeline'), path: '/timeline', icon: Clock },
     { name: t('nav.profile', 'Profile & Settings'), path: '/profile', icon: User },
   ];

@@ -521,9 +521,6 @@ const StructuredDataReview = ({ document, onUpdateSuccess }) => {
                 <a href="/appointments" className="btn btn-secondary btn-sm" style={{ fontSize: '0.78rem' }}>
                   Appointments Page
                 </a>
-                <a href="/consultations" className="btn btn-primary btn-sm" style={{ fontSize: '0.78rem' }}>
-                  Consultations Page
-                </a>
               </div>
             </div>
 

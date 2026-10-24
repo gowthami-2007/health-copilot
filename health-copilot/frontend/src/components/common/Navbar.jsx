@@ -15,7 +15,6 @@ const PAGE_TITLE_KEYS = {
   '/documents': 'documents.pageTitle',
   '/medications': 'medications.pageTitle',
   '/appointments': 'appointments.pageTitle',
-  '/consultations': 'consultations.pageTitle',
   '/timeline': 'timeline.pageTitle',
   '/profile': 'profile.pageTitle',
 };
