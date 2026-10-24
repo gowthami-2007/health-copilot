@@ -39,7 +39,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (user && user.isEmailVerified) {
+    if (user) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
@@ -111,15 +111,15 @@ const Register = () => {
 
     try {
       setIsLoading(true);
-      const res = await register(
+      await register(
         formData.name.trim(),
         formData.email.trim(),
         formData.password,
         formData.confirmPassword
       );
 
-      // Account created in unverified state; direct user to enter the 6-digit email OTP
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email.trim())}`, { replace: true });
+      // Successfully registered and authenticated: navigate straight to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       if (err.status === 409) {
         setErrorMsg('An account with this email already exists. Please sign in instead.');

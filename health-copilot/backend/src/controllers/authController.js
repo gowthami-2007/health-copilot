@@ -16,6 +16,9 @@ class AuthController {
     try {
       const validatedData = validateRegistration(req.body);
       const result = await authService.register(validatedData);
+      if (result.token) {
+        setAuthCookie(res, result.token, true, req);
+      }
       return successResponse(res, result.message, result, 201);
     } catch (error) {
       next(error);

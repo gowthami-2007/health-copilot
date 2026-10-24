@@ -68,7 +68,7 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     }, /Passwords do not match/);
   });
 
-  test('AuthService: creates unverified account requiring email verification', async () => {
+  test('AuthService: registers new user with direct login (verified state without OTP requirement)', async () => {
     const testEmail = `test_reg_${Date.now()}@example.com`;
     const result = await authService.register({
       name: 'Dr. John Watson',
@@ -77,10 +77,10 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     });
 
     assert.ok(result.user, 'User object must be returned');
-    assert.strictEqual(result.requiresVerification, true);
+    assert.ok(result.token, 'Direct login token must be returned upon registration');
     assert.strictEqual(result.user.email, testEmail);
     assert.strictEqual(result.user.name, 'Dr. John Watson');
-    assert.strictEqual(result.user.isEmailVerified, false);
+    assert.strictEqual(result.user.isEmailVerified, true);
     assert.strictEqual(result.user.password, undefined, 'Password field must not be exposed');
   });
 
@@ -107,28 +107,22 @@ describe('Phase 2 & Authentication Security: Full Test Suite', () => {
     );
   });
 
-  test('AuthService: rejects login for unverified account until verified', async () => {
-    const testEmail = `test_unverified_${Date.now()}@example.com`;
+  test('AuthService: direct login succeeds immediately after registration without email verification', async () => {
+    const testEmail = `test_direct_${Date.now()}@example.com`;
     const testPass = 'CorrectPassword123!';
-    await authService.register({
-      name: 'Unverified Tester',
+    const regRes = await authService.register({
+      name: 'Direct Login Tester',
       email: testEmail,
       password: testPass,
     });
 
-    await assert.rejects(
-      async () => {
-        await authService.login({
-          email: testEmail,
-          password: testPass,
-        });
-      },
-      (err) => {
-        assert.strictEqual(err.statusCode, 403);
-        assert.strictEqual(err.errorCode, 'EMAIL_NOT_VERIFIED');
-        return true;
-      }
-    );
+    assert.ok(regRes.token, 'Must return direct login token');
+    const loginRes = await authService.login({
+      email: testEmail,
+      password: testPass,
+    });
+    assert.ok(loginRes.token, 'Login must succeed directly without requiring email verification');
+    assert.strictEqual(loginRes.user.isEmailVerified, true);
   });
 
   test('AuthService: verifies email with 6-digit code and logs user in', async () => {

@@ -22,16 +22,13 @@ const {
 
 class AuthService {
   /**
-   * Registers a new user in unverified state and sends a 6-digit OTP to their email.
-   * OTP expires in 5 minutes.
+   * Registers a new user directly in verified state and logs them in immediately without email OTP.
    */
   async register({ name, email, password }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: normalizedEmail }).select(
-      '+emailVerificationLastSentAt'
-    );
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       if (existingUser.isEmailVerified) {
         throw new ConflictError(
@@ -39,87 +36,52 @@ class AuthService {
         );
       }
 
-      // If user exists but is unverified, check cooldown and send fresh OTP
-      const now = Date.now();
-      if (
-        existingUser.emailVerificationLastSentAt &&
-        now - existingUser.emailVerificationLastSentAt.getTime() < 60 * 1000
-      ) {
-        const remaining = Math.ceil(
-          (60000 - (now - existingUser.emailVerificationLastSentAt.getTime())) / 1000
-        );
-        throw new BadRequestError(
-          `A verification code was recently sent. Please wait ${remaining} second(s) before requesting a new code.`
-        );
-      }
-
-      // Update password and issue fresh OTP
+      // If user exists in unverified state, update password, verify account and log them in
       const hashedPassword = await hashPassword(password);
-      const verificationCode = generateNumericCode();
-      const otpHash = hashOtp(verificationCode);
-      const { rawToken, hashedToken } = generateSecureToken();
-      const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes expiration
-
       existingUser.name = name;
       existingUser.password = hashedPassword;
-      existingUser.emailVerificationOtpHash = otpHash;
-      existingUser.emailVerificationCode = verificationCode;
-      existingUser.emailVerificationToken = hashedToken;
-      existingUser.emailVerificationExpires = expiresAt;
+      existingUser.isEmailVerified = true;
+      existingUser.emailVerificationOtpHash = undefined;
+      existingUser.emailVerificationCode = undefined;
+      existingUser.emailVerificationToken = undefined;
+      existingUser.emailVerificationExpires = undefined;
       existingUser.emailVerificationAttempts = 0;
-      existingUser.emailVerificationLastSentAt = new Date(now);
       await existingUser.save();
 
-      await emailService.sendVerificationEmail({
-        to: normalizedEmail,
-        name: existingUser.name,
-        token: rawToken,
-        code: verificationCode,
-      });
+      // Auto-provision primary family profile
+      await patientProfileService.getProfiles(existingUser._id);
+
+      const token = generateToken(existingUser._id.toString(), { email: existingUser.email });
 
       return {
-        requiresVerification: true,
-        email: normalizedEmail,
-        message: 'A fresh 6-digit verification code has been sent to your email address.',
+        user: existingUser.toJSON(),
+        token,
+        message: 'Account registered and logged in successfully.',
       };
     }
 
     // Hash password securely
     const hashedPassword = await hashPassword(password);
 
-    // Generate cryptographically secure 6-digit numeric OTP and 5-minute expiry
-    const verificationCode = generateNumericCode();
-    const otpHash = hashOtp(verificationCode);
-    const { rawToken, hashedToken } = generateSecureToken();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
-
-    // Create user in unverified state
+    // Create user directly in verified state
     const newUser = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      isEmailVerified: false,
-      emailVerificationOtpHash: otpHash,
-      emailVerificationCode: verificationCode,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: expiresAt,
-      emailVerificationAttempts: 0,
-      emailVerificationLastSentAt: new Date(),
+      isEmailVerified: true,
       authProvider: 'local',
     });
 
-    // Dispatch real email with 6-digit OTP
-    await emailService.sendVerificationEmail({
-      to: normalizedEmail,
-      name,
-      token: rawToken,
-      code: verificationCode,
-    });
+    // Auto-provision primary family profile
+    await patientProfileService.getProfiles(newUser._id);
+
+    // Generate JWT token for direct login
+    const token = generateToken(newUser._id.toString(), { email: newUser.email });
 
     return {
-      requiresVerification: true,
-      email: normalizedEmail,
-      message: 'Account created! Please enter the 6-digit verification code sent to your email.',
+      user: newUser.toJSON(),
+      token,
+      message: 'Account registered and logged in successfully.',
     };
   }
 
@@ -317,12 +279,10 @@ class AuthService {
       throw new UnauthorizedError('Invalid email or password.');
     }
 
-    // Strictly enforce email verification on backend
+    // Auto-verify account upon valid login so user is never blocked by OTP
     if (!user.isEmailVerified) {
-      throw new EmailNotVerifiedError(
-        'Your email address has not been verified yet. Please check your inbox for the 6-digit verification code.',
-        { requiresVerification: true, email: user.email }
-      );
+      user.isEmailVerified = true;
+      await user.save();
     }
 
     // Generate JWT token
