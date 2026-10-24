@@ -79,6 +79,10 @@ const userSchema = new mongoose.Schema(
       select: false,
       index: true,
     },
+    passwordResetCode: {
+      type: String,
+      select: false,
+    },
     passwordResetExpires: {
       type: Date,
       select: false,

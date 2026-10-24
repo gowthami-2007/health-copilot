@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, ArrowRight, HeartPulse, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, HeartPulse, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -8,7 +8,11 @@ import ErrorMessage from '../components/common/ErrorMessage';
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const tokenParam = searchParams.get('token') || '';
+  const emailParam = searchParams.get('email') || '';
+  const codeParam = searchParams.get('code') || '';
 
+  const [email, setEmail] = useState(emailParam);
+  const [code, setCode] = useState(codeParam);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -48,8 +52,8 @@ const ResetPassword = () => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!tokenParam) {
-      setErrorMsg('Password reset token is missing from the URL. Please click the full link in your email.');
+    if (!tokenParam && (!code || code.trim().length !== 6 || !email)) {
+      setErrorMsg('Please enter your registered email and the 6-digit reset code sent to your inbox.');
       return;
     }
     if (password.length < 8) {
@@ -63,10 +67,16 @@ const ResetPassword = () => {
 
     try {
       setIsLoading(true);
-      await resetPassword({ token: tokenParam, password, confirmPassword });
+      await resetPassword({
+        token: tokenParam || null,
+        code: code ? code.trim() : null,
+        email: email ? email.trim() : null,
+        password,
+        confirmPassword,
+      });
       setIsSuccess(true);
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to reset password. The link may have expired.');
+      setErrorMsg(err.message || 'Failed to reset password. The link or code may have expired.');
     } finally {
       setIsLoading(false);
     }
@@ -145,20 +155,40 @@ const ResetPassword = () => {
             <div>
               {!tokenParam && (
                 <div style={{
-                  padding: '0.85rem 1rem',
+                  padding: '1rem',
                   marginBottom: '1.25rem',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
                   borderRadius: '8px',
-                  color: '#991b1b',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.5rem',
+                  color: '#0369a1',
+                  fontSize: '0.875rem',
                 }}>
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
-                    Reset token is missing. Please make sure you clicked the complete link sent to your email.
+                  <div style={{ fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <KeyRound size={16} /> Enter 6-Digit Password Reset Code
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', color: '#0369a1' }}>Registered Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '0' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', color: '#0369a1' }}>6-Digit OTP Code</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="123456"
+                      maxLength={6}
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      style={{ letterSpacing: '4px', fontWeight: 700, fontSize: '1.1rem' }}
+                      required
+                    />
                   </div>
                 </div>
               )}

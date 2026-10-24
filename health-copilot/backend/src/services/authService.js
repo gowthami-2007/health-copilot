@@ -422,7 +422,9 @@ class AuthService {
     }
 
     const { rawToken, hashedToken } = generateSecureToken();
+    const resetCode = generateNumericCode();
     user.passwordResetToken = hashedToken;
+    user.passwordResetCode = resetCode;
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
@@ -430,35 +432,48 @@ class AuthService {
       to: normalizedEmail,
       name: user.name,
       token: rawToken,
+      code: resetCode,
     });
 
     return genericResponse;
   }
 
   /**
-   * Resets password using valid token.
+   * Resets password using valid token or 6-digit verification code.
    */
-  async resetPassword({ token, password }) {
-    const hashed = hashToken(token);
-    const user = await User.findOne({
-      passwordResetToken: hashed,
-      passwordResetExpires: { $gt: new Date() },
-    }).select('+passwordResetToken +passwordResetExpires');
+  async resetPassword({ token, code, email, password }) {
+    let user;
+
+    if (token) {
+      const hashed = hashToken(token);
+      user = await User.findOne({
+        passwordResetToken: hashed,
+        passwordResetExpires: { $gt: new Date() },
+      }).select('+passwordResetToken +passwordResetExpires');
+    } else if (code && email) {
+      const normalizedEmail = email.trim().toLowerCase();
+      user = await User.findOne({
+        email: normalizedEmail,
+        passwordResetCode: code.trim(),
+        passwordResetExpires: { $gt: new Date() },
+      }).select('+passwordResetToken +passwordResetCode +passwordResetExpires');
+    }
 
     if (!user) {
       throw new BadRequestError(
-        'Password reset link is invalid or has expired. Please request a new password reset link.'
+        'Password reset link or verification code is invalid or has expired. Please request a new password reset.'
       );
     }
 
     user.password = await hashPassword(password);
     user.passwordResetToken = undefined;
+    user.passwordResetCode = undefined;
     user.passwordResetExpires = undefined;
     user.isEmailVerified = true;
     await user.save();
 
     return {
-      message: 'Password reset successful. You can now sign in with your new password.',
+      message: 'Password reset successful! You can now log in with your new password.',
     };
   }
 

@@ -89,20 +89,12 @@ class EmailService {
    * Main email dispatch handler
    */
   async sendMail({ to, subject, html, text }) {
-    // 1. If Resend API Key is configured, use fast native HTTPS API
-    if (config.email.providerApiKey && config.email.providerApiKey.startsWith('re_')) {
-      const httpResult = await this.sendViaResendHttp({ to, subject, html, text });
-      if (httpResult?.success) {
-        return httpResult;
-      }
-    }
-
-    // 2. Custom SMTP fallback if configured
+    // 1. Prioritize SMTP (e.g. Gmail SMTP) for universal delivery to all domains without sandbox restrictions
     const transporter = this.getTransporter();
-    if (transporter && config.nodeEnv !== 'test') {
+    if (transporter) {
       try {
         const info = await transporter.sendMail({
-          from: config.email.from || 'HealthCopilot <onboarding@resend.dev>',
+          from: config.email.from || '"HealthCopilot" <santhoshgopisetty693@gmail.com>',
           to,
           subject,
           text,
@@ -110,7 +102,15 @@ class EmailService {
         });
         return { success: true, messageId: info.messageId, provider: 'smtp' };
       } catch (err) {
-        console.error('[EmailService] SMTP delivery failed:', err.message);
+        console.error('[EmailService] SMTP delivery failed, falling back:', err.message);
+      }
+    }
+
+    // 2. Resend API Key fallback
+    if (config.email.providerApiKey && config.email.providerApiKey.startsWith('re_')) {
+      const httpResult = await this.sendViaResendHttp({ to, subject, html, text });
+      if (httpResult?.success) {
+        return httpResult;
       }
     }
 
@@ -144,20 +144,20 @@ class EmailService {
           Thank you for registering. To ensure your health records remain private and accessible only to you, please verify your email address.
         </p>
         
-        <div style="text-align: center; margin: 32px 0;">
+        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+          <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px;">Your 6-Digit Verification Code (OTP):</div>
+          <div style="font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #0284c7; font-family: monospace;">${code}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 8px;">⏱ Valid for 5 minutes only (Single-use)</div>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
           <a href="${verifyUrl}" style="background-color: #0284c7; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
             Verify Email Address
           </a>
         </div>
 
-        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
-          <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px;">Your 6-Digit One-Time Password (OTP):</div>
-          <div style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0284c7; font-family: monospace;">${code}</div>
-          <div style="font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 8px;">⏱ Valid for 5 minutes only (Single-use)</div>
-        </div>
-
         <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
-          If the button above does not work, copy and paste this link into your browser:<br/>
+          Or copy and paste this verification link into your browser:<br/>
           <a href="${verifyUrl}" style="color: #0284c7; word-break: break-all;">${verifyUrl}</a>
         </p>
 
@@ -186,9 +186,9 @@ If you did not request this email, please ignore it.
   }
 
   /**
-   * Sends a password reset link to the user.
+   * Sends a password reset link and 6-digit OTP to the user.
    */
-  async sendPasswordResetEmail({ to, name, token }) {
+  async sendPasswordResetEmail({ to, name, token, code }) {
     const resetUrl = `${config.clientUrl}/reset-password?token=${token}&email=${encodeURIComponent(to)}`;
     const subject = 'Reset your HealthCopilot password';
 
@@ -196,13 +196,22 @@ If you did not request this email, please ignore it.
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h1 style="color: #0284c7; font-size: 24px; font-weight: 800; margin: 0;">Health<span style="color: #0f172a;">Copilot</span></h1>
+          <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Password Reset Request</p>
         </div>
         <p style="font-size: 16px; line-height: 1.5;">Hi <strong>${name || 'there'}</strong>,</p>
         <p style="font-size: 15px; line-height: 1.6; color: #334155;">
-          We received a request to reset your password. Click the button below to choose a new password:
+          We received a request to reset your password. You can use your 6-digit verification code below or click the reset button.
         </p>
+
+        ${code ? `
+        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+          <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px;">Your 6-Digit Password Reset Code:</div>
+          <div style="font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #0284c7; font-family: monospace;">${code}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 8px;">⏱ Valid for 1 hour</div>
+        </div>
+        ` : ''}
         
-        <div style="text-align: center; margin: 32px 0;">
+        <div style="text-align: center; margin: 28px 0;">
           <a href="${resetUrl}" style="background-color: #0f172a; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block;">
             Reset Password
           </a>
@@ -223,6 +232,7 @@ Hi ${name || 'there'},
 
 You requested a password reset for HealthCopilot.
 
+${code ? `Your 6-digit reset code: ${code}\n(Valid for 1 hour).\n` : ''}
 Reset your password here:
 ${resetUrl}
 

@@ -90,10 +90,10 @@ const validateForgotPassword = (data) => {
 };
 
 const validateResetPassword = (data) => {
-  const { token, password, confirmPassword } = data || {};
+  const { token, code, email, password, confirmPassword } = data || {};
 
-  if (!token || typeof token !== 'string' || !token.trim()) {
-    throw new ValidationError('Password reset token is missing or invalid.');
+  if (!token && (!code || !email)) {
+    throw new ValidationError('Password reset token or 6-digit verification code is required.');
   }
 
   validatePasswordStrength(password);
@@ -103,7 +103,9 @@ const validateResetPassword = (data) => {
   }
 
   return {
-    token: token.trim(),
+    token: token ? String(token).trim() : null,
+    code: code ? String(code).trim() : null,
+    email: email ? email.trim().toLowerCase() : null,
     password,
   };
 };
