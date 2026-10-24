@@ -7,7 +7,7 @@ import Modal from '../components/common/Modal';
 import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import documentService from '../services/documentService';
-import { UploadCloud, Plus, Sparkles } from 'lucide-react';
+import { UploadCloud, Plus } from 'lucide-react';
 import Button from '../components/common/Button';
 import useLanguage from '../hooks/useLanguage';
 
@@ -81,31 +81,14 @@ const Documents = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Button
-            id="open-prescription-ai-btn"
-            variant="outline"
-            onClick={() => setIsPrescriptionModalOpen(true)}
-            icon={Sparkles}
-            style={{
-              borderColor: '#0d9488',
-              color: '#0f766e',
-              backgroundColor: '#f0fdfa',
-              fontWeight: 600,
-            }}
-          >
-            {isTelugu ? 'AI ప్రిస్క్రిప్షన్ రీడర్' : 'AI Prescription Reader (Vision)'}
-          </Button>
-
-          <Button
-            id="open-upload-modal-btn"
-            variant="primary"
-            onClick={() => setIsUploadModalOpen(true)}
-            icon={Plus}
-          >
-            {t('documents.uploadBtn', 'Upload New Document')}
-          </Button>
-        </div>
+        <Button
+          id="open-upload-modal-btn"
+          variant="primary"
+          onClick={() => setIsUploadModalOpen(true)}
+          icon={Plus}
+        >
+          {t('documents.uploadBtn', 'Upload New Document')}
+        </Button>
       </div>
 
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
