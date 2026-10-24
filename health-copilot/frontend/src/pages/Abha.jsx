@@ -29,6 +29,8 @@ import {
 import useAuth from '../hooks/useAuth';
 import useLanguage from '../hooks/useLanguage';
 import abhaService from '../services/abhaService';
+import Layout from '../components/common/Layout';
+import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
 import ErrorMessage from '../components/common/ErrorMessage';
 import DocumentViewer from '../components/documents/DocumentViewer';
@@ -306,7 +308,8 @@ const Abha = () => {
   };
 
   return (
-    <div className="container" style={{ padding: '1.5rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <Layout pageTitle={t('abha.pageTitle', 'ABHA Health ID')}>
+      <div className="container" style={{ padding: '1.5rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Page Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -1338,14 +1341,24 @@ const Abha = () => {
       )}
 
       {/* Document Viewer Modal */}
-      {previewDoc && (
-        <DocumentViewer
-          document={previewDoc}
-          onClose={() => setPreviewDoc(null)}
-        />
-      )}
+      <Modal
+        isOpen={Boolean(previewDoc)}
+        onClose={() => setPreviewDoc(null)}
+        title={previewDoc?.fileName || 'Medical Document Preview'}
+        maxWidth="950px"
+      >
+        {previewDoc && (
+          <DocumentViewer
+            fileUrl={previewDoc.fileUrl}
+            documentId={previewDoc.id || previewDoc._id}
+            fileName={previewDoc.fileName}
+            fileType={previewDoc.fileType}
+          />
+        )}
+      </Modal>
     </div>
-  );
+  </Layout>
+);
 };
 
 export default Abha;

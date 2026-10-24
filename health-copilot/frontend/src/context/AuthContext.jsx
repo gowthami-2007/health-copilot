@@ -53,6 +53,9 @@ export const AuthProvider = ({ children }) => {
       if (payload.token) {
         setToken(payload.token);
         setAuthToken(payload.token);
+        try {
+          localStorage.setItem('health_copilot_token', payload.token);
+        } catch {}
       }
       return userData;
     } catch (err) {
@@ -71,6 +74,9 @@ export const AuthProvider = ({ children }) => {
       if (payload.token) {
         setToken(payload.token);
         setAuthToken(payload.token);
+        try {
+          localStorage.setItem('health_copilot_token', payload.token);
+        } catch {}
       }
       return userData;
     } catch (err) {
@@ -90,6 +96,9 @@ export const AuthProvider = ({ children }) => {
       if (payload?.token) {
         setToken(payload.token);
         setAuthToken(payload.token);
+        try {
+          localStorage.setItem('health_copilot_token', payload.token);
+        } catch {}
       }
       return payload;
     } catch (err) {
@@ -109,6 +118,9 @@ export const AuthProvider = ({ children }) => {
       if (payload?.token) {
         setToken(payload.token);
         setAuthToken(payload.token);
+        try {
+          localStorage.setItem('health_copilot_token', payload.token);
+        } catch {}
       }
       return payload;
     } catch (err) {

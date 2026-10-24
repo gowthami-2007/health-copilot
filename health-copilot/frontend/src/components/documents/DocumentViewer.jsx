@@ -1,30 +1,34 @@
 import React from 'react';
 import { ExternalLink, Download, FileText, Image } from 'lucide-react';
 import Button from '../common/Button';
+import { getAuthToken, getBaseUrl } from '../../services/api';
 
 const DocumentViewer = ({ documentId, fileUrl, fileName, fileType }) => {
   const isPdf = fileType?.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf');
   const isImage = fileType?.includes('image') || /\.(png|jpe?g)$/i.test(fileName || '');
 
-  // Obtain current session's JWT token
-  const token = localStorage.getItem('health_copilot_token');
-  const apiBase = (import.meta.env.VITE_API_URL || 'https://health-copilot-pv0y.onrender.com/api').replace(/\/+$/, '');
+  // Obtain current session's JWT token (support in-memory and persistent storage)
+  const token = getAuthToken() || localStorage.getItem('health_copilot_token') || '';
+  const apiBase = getBaseUrl().replace(/\/+$/, '');
 
   // Construct secure, authenticated file streaming endpoints
   let viewUrl = '';
   let downloadUrl = '';
 
-  if (documentId) {
-    viewUrl = `${apiBase}/documents/${documentId}/file?token=${encodeURIComponent(token || '')}`;
-    downloadUrl = `${apiBase}/documents/${documentId}/download?token=${encodeURIComponent(token || '')}`;
-  } else if (fileUrl) {
+  if (fileUrl) {
     if (fileUrl.startsWith('http')) {
       viewUrl = token ? `${fileUrl}${fileUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : fileUrl;
     } else {
       const cleanPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-      viewUrl = `${apiBase}${cleanPath}?token=${encodeURIComponent(token || '')}`;
+      const prefix = cleanPath.startsWith('/api')
+        ? (apiBase === '/api' ? '' : apiBase.replace(/\/api$/, ''))
+        : apiBase;
+      viewUrl = `${prefix}${cleanPath}${cleanPath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
     }
     downloadUrl = viewUrl;
+  } else if (documentId) {
+    viewUrl = `${apiBase}/documents/${documentId}/file?token=${encodeURIComponent(token)}`;
+    downloadUrl = `${apiBase}/documents/${documentId}/download?token=${encodeURIComponent(token)}`;
   }
 
   return (

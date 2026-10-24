@@ -156,7 +156,7 @@ class AbhaService {
       const documents = await Document.find({ userId: targetUser._id })
         .sort({ createdAt: -1 })
         .select(
-          '_id fileName documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
+          '_id userId fileName fileType fileUrl documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
         );
 
       return {
@@ -174,7 +174,7 @@ class AbhaService {
           abhaStatus: targetUser.abhaStatus || 'DEMO_ASSIGNED',
           isAbhaVerified: Boolean(targetUser.isAbhaVerified),
         },
-        documents: documents.map((d) => this.formatAuthorizedDocument(d)),
+        documents: documents.map((d) => this.formatAuthorizedDocument(d, targetUser._id)),
         message: 'Viewing your own health records.',
       };
     }
@@ -210,7 +210,7 @@ class AbhaService {
       const documents = await Document.find(docQuery)
         .sort({ createdAt: -1 })
         .select(
-          '_id fileName documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
+          '_id userId fileName fileType fileUrl documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
         );
 
       return {
@@ -233,7 +233,7 @@ class AbhaService {
           dateOfBirth: targetUser.dateOfBirth || null,
           abhaStatus: targetUser.abhaStatus || 'DEMO_ASSIGNED',
         },
-        documents: documents.map((d) => this.formatAuthorizedDocument(d)),
+        documents: documents.map((d) => this.formatAuthorizedDocument(d, targetUser._id)),
         message: 'Access authorized by patient consent.',
       };
     }
@@ -491,10 +491,10 @@ class AbhaService {
     const docs = await Document.find({ userId: patientId })
       .sort({ createdAt: -1 })
       .select(
-        '_id fileName documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
+        '_id userId fileName fileType fileUrl documentType status fileSize createdAt documentDate hospitalName summary extractedMedicalData failureReason'
       );
 
-    return docs.map((d) => this.formatAuthorizedDocument(d));
+    return docs.map((d) => this.formatAuthorizedDocument(d, patientId));
   }
 
   /**
@@ -598,11 +598,16 @@ class AbhaService {
   }
 
   // Helper: Standardized format for authorized document response
-  formatAuthorizedDocument(doc) {
+  formatAuthorizedDocument(doc, targetPatientId = null) {
+    const patientId = targetPatientId || doc.userId;
+    const isPdf = doc.fileType?.includes('pdf') || doc.fileName?.toLowerCase().endsWith('.pdf');
     return {
       id: doc._id,
+      patientId,
       fileName: doc.fileName,
       documentType: doc.documentType,
+      fileType: doc.fileType || (isPdf ? 'application/pdf' : 'image/jpeg'),
+      fileUrl: `/api/abha/patients/${patientId}/documents/${doc._id}/file`,
       status: doc.status,
       fileSize: doc.fileSize,
       createdAt: doc.createdAt,
