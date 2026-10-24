@@ -57,6 +57,7 @@ const validateLogin = (data) => {
   return {
     email: email.trim().toLowerCase(),
     password,
+    rememberMe: data.rememberMe !== false,
   };
 };
 

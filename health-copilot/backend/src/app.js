@@ -21,22 +21,26 @@ app.use(helmet({
 // CORS configuration
 const allowedOrigins = [
   config.clientUrl,
+  'https://health-copilot-pearl.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
 ];
 
+const { cookieParser } = require('./utils/cookieHelper');
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps, curl, postman, automated tests)
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in dev, strict in prod
+    return callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 
 // Request logging
@@ -47,6 +51,7 @@ if (config.nodeEnv !== 'test') {
 // Body parsers
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(cookieParser);
 
 // Block public unauthenticated access to uploaded documents (enforces strict patient privacy)
 app.use('/uploads', (req, res) => {

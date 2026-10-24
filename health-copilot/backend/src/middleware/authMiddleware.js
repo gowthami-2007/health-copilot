@@ -6,7 +6,12 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
-    if (
+    // 1. Extract from secure HTTP-only cookie
+    if (req.cookies && (req.cookies.health_copilot_token || req.cookies.token)) {
+      token = req.cookies.health_copilot_token || req.cookies.token;
+    }
+    // 2. Fallback to Authorization: Bearer header
+    else if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer ')
     ) {
@@ -75,7 +80,9 @@ const requireVerifiedEmail = (req, res, next) => {
 const optionalAuth = async (req, res, next) => {
   try {
     let token;
-    if (
+    if (req.cookies && (req.cookies.health_copilot_token || req.cookies.token)) {
+      token = req.cookies.health_copilot_token || req.cookies.token;
+    } else if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer ')
     ) {

@@ -4,7 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import Loader from './Loader';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -13,6 +13,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user && user.isEmailVerified === false) {
+    return <Navigate to={`/verify-email?email=${encodeURIComponent(user.email || '')}`} replace />;
   }
 
   return children;

@@ -5,18 +5,13 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
   timeout: 45000,
 });
 
-// Request Interceptor: Attach JWT token if present
+// Request Interceptor
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('health_copilot_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
+  (config) => config,
   (error) => Promise.reject(error)
 );
 
@@ -26,12 +21,12 @@ api.interceptors.response.use(
   (error) => {
     const errorData = error.response?.data;
     const message = errorData?.message || error.message || 'An unexpected error occurred';
-    
-    // Auto logout on 401 Unauthorized
-    if (error.response?.status === 401) {
-      localStorage.removeItem('health_copilot_token');
-      localStorage.removeItem('health_copilot_user');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+    const isAuthProbe = error.config?.url?.includes('/auth/me');
+
+    // On 401 Unauthorized for protected pages (excluding session check probe or public pages)
+    if (error.response?.status === 401 && !isAuthProbe) {
+      const publicPaths = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/'];
+      if (!publicPaths.includes(window.location.pathname)) {
         window.location.href = '/login';
       }
     }
@@ -41,6 +36,7 @@ api.interceptors.response.use(
       status: error.response?.status || 500,
       code: errorData?.error || 'UNKNOWN_ERROR',
       details: errorData?.details || null,
+      data: errorData?.data || null,
     });
   }
 );

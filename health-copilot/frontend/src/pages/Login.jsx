@@ -20,6 +20,7 @@ import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -28,11 +29,17 @@ const Login = () => {
   const [unverifiedState, setUnverifiedState] = useState(null); // { email }
   const [resendingEmail, setResendingEmail] = useState(false);
 
-  const { login, googleLogin, resendVerification } = useAuth();
+  const { user, login, googleLogin, resendVerification } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/dashboard';
+
+  React.useEffect(() => {
+    if (user && user.isEmailVerified) {
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
 
   const validateEmailFormat = (val) => {
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val.trim());
@@ -60,7 +67,7 @@ const Login = () => {
 
     try {
       setIsLoading(true);
-      await login(cleanEmail, password);
+      await login(cleanEmail, password, rememberMe);
       navigate(from, { replace: true });
     } catch (err) {
       // Check if server indicated unverified email
@@ -310,6 +317,27 @@ const Login = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <label style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                color: 'var(--text-main)',
+                userSelect: 'none',
+              }}>
+                <input
+                  id="login-remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                />
+                Remember me on this device (7 days)
+              </label>
             </div>
 
             <Button

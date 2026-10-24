@@ -46,6 +46,17 @@ class ValidationError extends AppError {
   }
 }
 
+class EmailNotVerifiedError extends AppError {
+  constructor(emailOrMessage = 'Your email address has not been verified yet.', details = null) {
+    const isEmail = typeof emailOrMessage === 'string' && emailOrMessage.includes('@');
+    const message = isEmail
+      ? 'Your email address has not been verified yet. Please check your inbox for your 6-digit verification code.'
+      : emailOrMessage;
+    const finalDetails = details || (isEmail ? { requiresVerification: true, email: emailOrMessage } : { requiresVerification: true });
+    super(message, 403, 'EMAIL_NOT_VERIFIED', finalDetails);
+  }
+}
+
 module.exports = {
   AppError,
   BadRequestError,
@@ -54,4 +65,5 @@ module.exports = {
   NotFoundError,
   ConflictError,
   ValidationError,
+  EmailNotVerifiedError,
 };

@@ -1,63 +1,132 @@
 const User = require('../models/User');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateToken } = require('../utils/jwt');
-const { generateSecureToken, generateNumericCode, hashToken } = require('../utils/cryptoTokens');
+const {
+  generateSecureToken,
+  generateNumericCode,
+  hashToken,
+  hashOtp,
+  verifyOtp,
+} = require('../utils/cryptoTokens');
 const emailService = require('./emailService');
 const googleAuthService = require('./googleAuthService');
+const patientProfileService = require('./patientProfileService');
 const {
   ConflictError,
   UnauthorizedError,
   NotFoundError,
   BadRequestError,
   ForbiddenError,
+  EmailNotVerifiedError,
 } = require('../utils/errors');
 
 class AuthService {
   /**
-   * Registers a new user directly in verified state and returns active session JWT.
+   * Registers a new user in unverified state and sends a 6-digit OTP to their email.
+   * OTP expires in 5 minutes.
    */
   async register({ name, email, password }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const existingUser = await User.findOne({ email: normalizedEmail }).select(
+      '+emailVerificationLastSentAt'
+    );
     if (existingUser) {
-      throw new ConflictError('An account with this email already exists. Please sign in instead.');
+      if (existingUser.isEmailVerified) {
+        throw new ConflictError(
+          'An account with this email already exists. Please sign in instead.'
+        );
+      }
+
+      // If user exists but is unverified, check cooldown and send fresh OTP
+      const now = Date.now();
+      if (
+        existingUser.emailVerificationLastSentAt &&
+        now - existingUser.emailVerificationLastSentAt.getTime() < 60 * 1000
+      ) {
+        const remaining = Math.ceil(
+          (60000 - (now - existingUser.emailVerificationLastSentAt.getTime())) / 1000
+        );
+        throw new BadRequestError(
+          `A verification code was recently sent. Please wait ${remaining} second(s) before requesting a new code.`
+        );
+      }
+
+      // Update password and issue fresh OTP
+      const hashedPassword = await hashPassword(password);
+      const verificationCode = generateNumericCode();
+      const otpHash = hashOtp(verificationCode);
+      const { rawToken, hashedToken } = generateSecureToken();
+      const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes expiration
+
+      existingUser.name = name;
+      existingUser.password = hashedPassword;
+      existingUser.emailVerificationOtpHash = otpHash;
+      existingUser.emailVerificationCode = verificationCode;
+      existingUser.emailVerificationToken = hashedToken;
+      existingUser.emailVerificationExpires = expiresAt;
+      existingUser.emailVerificationAttempts = 0;
+      existingUser.emailVerificationLastSentAt = new Date(now);
+      await existingUser.save();
+
+      await emailService.sendVerificationEmail({
+        to: normalizedEmail,
+        name: existingUser.name,
+        token: rawToken,
+        code: verificationCode,
+      });
+
+      return {
+        requiresVerification: true,
+        email: normalizedEmail,
+        message: 'A fresh 6-digit verification code has been sent to your email address.',
+      };
     }
 
     // Hash password securely
     const hashedPassword = await hashPassword(password);
 
-    // Generate verification code and token
-    const { rawToken, hashedToken } = generateSecureToken();
+    // Generate cryptographically secure 6-digit numeric OTP and 5-minute expiry
     const verificationCode = generateNumericCode();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const otpHash = hashOtp(verificationCode);
+    const { rawToken, hashedToken } = generateSecureToken();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
 
-    // Create user in verified state directly
+    // Create user in unverified state
     const newUser = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      isEmailVerified: true,
-      emailVerificationToken: hashedToken,
+      isEmailVerified: false,
+      emailVerificationOtpHash: otpHash,
       emailVerificationCode: verificationCode,
+      emailVerificationToken: hashedToken,
       emailVerificationExpires: expiresAt,
+      emailVerificationAttempts: 0,
+      emailVerificationLastSentAt: new Date(),
       authProvider: 'local',
     });
 
-    // Generate JWT session token immediately
-    const token = generateToken(newUser._id.toString(), { email: newUser.email });
+    // Dispatch real email with 6-digit OTP
+    await emailService.sendVerificationEmail({
+      to: normalizedEmail,
+      name,
+      token: rawToken,
+      code: verificationCode,
+    });
 
     return {
-      user: newUser.toJSON(),
-      token,
-      requiresVerification: false,
-      message: 'Account created successfully! Welcome to HealthCopilot.',
+      requiresVerification: true,
+      email: normalizedEmail,
+      message: 'Account created! Please enter the 6-digit verification code sent to your email.',
     };
   }
 
   /**
-   * Verifies an email using token or 6-digit code.
+   * Verifies an email using token link or 6-digit OTP code.
+   * Enforces 5-minute expiry, max 5 failed attempts, single-use invalidation,
+   * and auto-provisions user family profile.
    */
   async verifyEmail({ token, code, email }) {
     let user;
@@ -67,28 +136,79 @@ class AuthService {
       user = await User.findOne({
         emailVerificationToken: hashed,
         emailVerificationExpires: { $gt: new Date() },
-      }).select('+emailVerificationToken +emailVerificationExpires');
+      }).select('+emailVerificationToken +emailVerificationExpires +emailVerificationAttempts');
     } else if (code && email) {
       const normalizedEmail = email.trim().toLowerCase();
       user = await User.findOne({
         email: normalizedEmail,
-        emailVerificationCode: code.trim(),
-        emailVerificationExpires: { $gt: new Date() },
-      }).select('+emailVerificationCode +emailVerificationExpires');
+      }).select(
+        '+emailVerificationOtpHash +emailVerificationCode +emailVerificationExpires +emailVerificationAttempts'
+      );
+
+      if (!user) {
+        throw new BadRequestError('Invalid email or verification code. Please request a new code.');
+      }
+
+      // If already verified, allow login
+      if (user.isEmailVerified) {
+        const loginToken = generateToken(user._id.toString(), { email: user.email });
+        return {
+          user: user.toJSON(),
+          token: loginToken,
+          message: 'Email is already verified. You are now logged in.',
+        };
+      }
+
+      // Enforce rate limiting: max 5 failed attempts
+      if ((user.emailVerificationAttempts || 0) >= 5) {
+        user.emailVerificationOtpHash = undefined;
+        user.emailVerificationCode = undefined;
+        user.emailVerificationExpires = undefined;
+        await user.save();
+        throw new BadRequestError(
+          'Too many failed verification attempts. Please request a new verification code.'
+        );
+      }
+
+      // Check 5-minute expiration
+      if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+        throw new BadRequestError(
+          'Verification code has expired (5-minute limit). Please click Resend Code.'
+        );
+      }
+
+      // Timing-safe OTP comparison
+      const isOtpValid =
+        verifyOtp(code.trim(), user.emailVerificationOtpHash) ||
+        (user.emailVerificationCode && user.emailVerificationCode === code.trim());
+
+      if (!isOtpValid) {
+        user.emailVerificationAttempts = (user.emailVerificationAttempts || 0) + 1;
+        await user.save();
+        const remaining = Math.max(0, 5 - user.emailVerificationAttempts);
+        throw new BadRequestError(
+          `Invalid verification code. ${remaining} attempt(s) remaining.`
+        );
+      }
     }
 
     if (!user) {
       throw new BadRequestError(
-        "We couldn't verify this email address. The link or code may be invalid, expired, or already used. Please check the address or try another email."
+        "We couldn't verify this email address. The link or code may be invalid, expired, or already used."
       );
     }
 
-    // Mark user verified and clear verification tokens (prevents reuse)
+    // Mark user verified and clear verification tokens (enforces single-use)
     user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
+    user.emailVerificationOtpHash = undefined;
     user.emailVerificationCode = undefined;
+    user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
+    user.emailVerificationAttempts = 0;
     await user.save();
+
+    // Auto-provision primary family profile
+    await patientProfileService.getProfiles(user._id);
 
     // Generate JWT token upon successful verification
     const loginToken = generateToken(user._id.toString(), { email: user.email });
@@ -101,26 +221,59 @@ class AuthService {
   }
 
   /**
-   * Resends verification email with fresh token/code.
+   * Resends verification email with fresh 6-digit OTP code.
+   * Enforces 60-second cooldown and anti-enumeration.
    */
   async resendVerification({ email }) {
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      '+emailVerificationLastSentAt +emailVerificationAttempts'
+    );
+
+    // Generic response to avoid email enumeration
+    const genericResponse = {
+      success: true,
+      message:
+        'If an account exists with this email address, a fresh 6-digit verification code has been sent.',
+    };
 
     if (!user) {
-      throw new NotFoundError(
-        "We couldn't verify this email address. Please check the address or try another email."
+      return genericResponse;
+    }
+
+    if (user.isEmailVerified) {
+      return {
+        success: true,
+        message: 'This email is already verified. You can sign in directly.',
+      };
+    }
+
+    // Enforce 60-second cooldown
+    const now = Date.now();
+    if (
+      user.emailVerificationLastSentAt &&
+      now - user.emailVerificationLastSentAt.getTime() < 60 * 1000
+    ) {
+      const remainingSeconds = Math.ceil(
+        (60000 - (now - user.emailVerificationLastSentAt.getTime())) / 1000
+      );
+      throw new BadRequestError(
+        `Please wait ${remainingSeconds} second(s) before requesting another verification code.`
       );
     }
 
-    // Generate new token & code
-    const { rawToken, hashedToken } = generateSecureToken();
+    // Generate fresh OTP code and invalidate previous code
     const verificationCode = generateNumericCode();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const otpHash = hashOtp(verificationCode);
+    const { rawToken, hashedToken } = generateSecureToken();
+    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes expiration
 
-    user.emailVerificationToken = hashedToken;
+    user.emailVerificationOtpHash = otpHash;
     user.emailVerificationCode = verificationCode;
+    user.emailVerificationToken = hashedToken;
     user.emailVerificationExpires = expiresAt;
+    user.emailVerificationAttempts = 0;
+    user.emailVerificationLastSentAt = new Date(now);
     await user.save();
 
     await emailService.sendVerificationEmail({
@@ -132,18 +285,21 @@ class AuthService {
 
     return {
       success: true,
-      message: 'A fresh verification link and code have been sent to your email.',
+      message: 'A fresh 6-digit verification code has been sent to your email.',
     };
   }
 
   /**
-   * Authenticates an existing user with email and password.
+   * Authenticates user with email and password.
+   * Rejects unverified accounts with EMAIL_NOT_VERIFIED error.
    */
-  async login({ email, password }) {
+  async login({ email, password, rememberMe = true }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Query user and select password + isEmailVerified
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      '+password +isEmailVerified'
+    );
     if (!user) {
       throw new UnauthorizedError('Invalid email or password.');
     }
@@ -161,13 +317,12 @@ class AuthService {
       throw new UnauthorizedError('Invalid email or password.');
     }
 
-    // Auto-verify if legacy user hasn't been verified yet
+    // Strictly enforce email verification on backend
     if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.emailVerificationToken = undefined;
-      user.emailVerificationCode = undefined;
-      user.emailVerificationExpires = undefined;
-      await user.save();
+      throw new EmailNotVerifiedError(
+        'Your email address has not been verified yet. Please check your inbox for the 6-digit verification code.',
+        { requiresVerification: true, email: user.email }
+      );
     }
 
     // Generate JWT token
@@ -176,6 +331,7 @@ class AuthService {
     return {
       user: user.toJSON(),
       token,
+      rememberMe: Boolean(rememberMe),
     };
   }
 
@@ -183,7 +339,6 @@ class AuthService {
    * Authenticates a user via Google ID Token from Google Identity Services.
    */
   async googleAuth({ idToken }) {
-    // Cryptographically verify Google token
     const googleUser = await googleAuthService.verifyIdToken(idToken);
     const { googleId, email, emailVerified, name, avatar } = googleUser;
 
@@ -191,11 +346,9 @@ class AuthService {
       throw new UnauthorizedError('Failed to verify Google identity.');
     }
 
-    // 1. Check if user already exists with this Google sub ID
     let user = await User.findOne({ googleId });
 
     if (user) {
-      // Existing Google user -> Sign in
       if (!user.isEmailVerified && emailVerified) {
         user.isEmailVerified = true;
         await user.save();
@@ -208,18 +361,15 @@ class AuthService {
       };
     }
 
-    // 2. Check if user already exists with this verified email
     if (email) {
       user = await User.findOne({ email });
       if (user) {
-        // Only link if Google email is verified
         if (!emailVerified) {
           throw new UnauthorizedError(
             'Google account email is not verified by Google. Cannot securely link account.'
           );
         }
 
-        // Secure account linking
         user.googleId = googleId;
         user.isEmailVerified = true;
         if (!user.avatar && avatar) user.avatar = avatar;
@@ -234,7 +384,6 @@ class AuthService {
       }
     }
 
-    // 3. New Google User -> Create account
     const newUser = await User.create({
       name: name || 'Google User',
       email: email || `${googleId}@google.user`,
@@ -243,6 +392,9 @@ class AuthService {
       isEmailVerified: Boolean(emailVerified),
       authProvider: 'google',
     });
+
+    // Auto-provision primary family profile
+    await patientProfileService.getProfiles(newUser._id);
 
     const token = generateToken(newUser._id.toString(), { email: newUser.email });
 
@@ -260,9 +412,9 @@ class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
 
-    // Always return generic success to prevent account enumeration
     const genericResponse = {
-      message: 'If an account exists with this email address, a password reset link has been sent.',
+      message:
+        'If an account exists with this email address, a password reset link has been sent.',
     };
 
     if (!user) {
@@ -299,11 +451,9 @@ class AuthService {
       );
     }
 
-    // Hash new password and invalidate reset token
     user.password = await hashPassword(password);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
-    // Mark email verified since user verified ownership of the mailbox
     user.isEmailVerified = true;
     await user.save();
 

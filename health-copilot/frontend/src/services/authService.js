@@ -21,6 +21,10 @@ export const authService = {
     return await api.post('/auth/resend-verification', { email });
   },
 
+  async resendOtp(email) {
+    return await api.post('/auth/resend-otp', { email });
+  },
+
   async forgotPassword(email) {
     return await api.post('/auth/forgot-password', { email });
   },
@@ -38,9 +42,6 @@ export const authService = {
       await api.post('/auth/logout');
     } catch (err) {
       // Continue even if network error on logout
-    } finally {
-      localStorage.removeItem('health_copilot_token');
-      localStorage.removeItem('health_copilot_user');
     }
   },
 };

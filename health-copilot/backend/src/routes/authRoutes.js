@@ -50,6 +50,9 @@ router.get('/verify-email', (req, res, next) => authController.verifyEmail(req, 
 router.post('/resend-verification', emailActionLimiter, (req, res, next) =>
   authController.resendVerification(req, res, next)
 );
+router.post('/resend-otp', emailActionLimiter, (req, res, next) =>
+  authController.resendVerification(req, res, next)
+);
 
 // Standard & Google Authentication
 router.post('/login', loginLimiter, (req, res, next) => authController.login(req, res, next));

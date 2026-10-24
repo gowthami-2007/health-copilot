@@ -4,40 +4,25 @@ import authService from '../services/authService';
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('health_copilot_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [token, setToken] = useState(() => localStorage.getItem('health_copilot_token') || null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Validate session on mount
+  // Validate session on mount via HTTP-only cookie
   const checkAuth = useCallback(async () => {
-    const currentToken = localStorage.getItem('health_copilot_token');
-    if (!currentToken) {
-      setUser(null);
-      setToken(null);
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await authService.getMe();
-      if (response?.data?.user) {
-        setUser(response.data.user);
-        localStorage.setItem('health_copilot_user', JSON.stringify(response.data.user));
+      const userData = response?.data?.user || response?.user;
+      if (userData) {
+        setUser(userData);
+      } else {
+        setUser(null);
       }
     } catch (err) {
-      console.warn('Session verification failed:', err.message);
+      // 401 or network error -> treat as unauthenticated
       setUser(null);
       setToken(null);
-      localStorage.removeItem('health_copilot_token');
-      localStorage.removeItem('health_copilot_user');
     } finally {
       setLoading(false);
     }
@@ -47,15 +32,16 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = true) => {
     setError(null);
     try {
-      const res = await authService.login({ email, password });
-      const { user: userData, token: userToken } = res.data;
+      const res = await authService.login({ email, password, rememberMe });
+      const payload = res.data || res;
+      const userData = payload.user || payload;
       setUser(userData);
-      setToken(userToken);
-      localStorage.setItem('health_copilot_token', userToken);
-      localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      if (payload.token) {
+        setToken(payload.token);
+      }
       return userData;
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -67,11 +53,12 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const res = await authService.googleAuth(idToken);
-      const { user: userData, token: userToken } = res.data;
+      const payload = res.data || res;
+      const userData = payload.user || payload;
       setUser(userData);
-      setToken(userToken);
-      localStorage.setItem('health_copilot_token', userToken);
-      localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      if (payload.token) {
+        setToken(payload.token);
+      }
       return userData;
     } catch (err) {
       setError(err.message || 'Google authentication failed');
@@ -84,13 +71,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authService.register({ name, email, password, confirmPassword });
       const payload = res.data || res;
-      // If server returned a session token immediately (auto-login)
-      if (payload?.token) {
-        const { user: userData, token: userToken } = payload;
-        setUser(userData);
-        setToken(userToken);
-        localStorage.setItem('health_copilot_token', userToken);
-        localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      if (payload?.user) {
+        // Kept in pending verification state
+        setUser(payload.user);
       }
       return payload;
     } catch (err) {
@@ -103,14 +86,14 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const res = await authService.verifyEmail({ token: verifyToken, code, email });
-      if (res.data?.token) {
-        const { user: userData, token: userToken } = res.data;
-        setUser(userData);
-        setToken(userToken);
-        localStorage.setItem('health_copilot_token', userToken);
-        localStorage.setItem('health_copilot_user', JSON.stringify(userData));
+      const payload = res.data || res;
+      if (payload?.user) {
+        setUser(payload.user);
       }
-      return res.data;
+      if (payload?.token) {
+        setToken(payload.token);
+      }
+      return payload;
     } catch (err) {
       setError(err.message || 'Verification failed');
       throw err;
@@ -119,6 +102,10 @@ export const AuthProvider = ({ children }) => {
 
   const resendVerification = async (email) => {
     return await authService.resendVerification(email);
+  };
+
+  const resendOtp = async (email) => {
+    return await authService.resendOtp(email);
   };
 
   const forgotPassword = async (email) => {
@@ -132,11 +119,16 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
+    } catch {
+      // Continue even if network error on logout
     } finally {
       setUser(null);
       setToken(null);
-      localStorage.removeItem('health_copilot_token');
-      localStorage.removeItem('health_copilot_user');
+      // Clean up any legacy items
+      try {
+        localStorage.removeItem('health_copilot_token');
+        localStorage.removeItem('health_copilot_user');
+      } catch {}
     }
   };
 
@@ -145,12 +137,13 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     error,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: Boolean(user),
     login,
     googleLogin,
     register,
     verifyEmail,
     resendVerification,
+    resendOtp,
     forgotPassword,
     resetPassword,
     logout,

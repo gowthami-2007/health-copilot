@@ -150,10 +150,10 @@ class EmailService {
           </a>
         </div>
 
-        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; text-align: center; margin: 24px 0;">
-          <div style="font-size: 13px; color: #64748b; margin-bottom: 6px;">Or enter this 6-digit verification code:</div>
-          <div style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #0284c7;">${code}</div>
-          <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">Valid for 24 hours</div>
+        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+          <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px;">Your 6-Digit One-Time Password (OTP):</div>
+          <div style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0284c7; font-family: monospace;">${code}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 8px;">⏱ Valid for 5 minutes only (Single-use)</div>
         </div>
 
         <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
@@ -163,7 +163,7 @@ class EmailService {
 
         <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;" />
         <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
-          If you didn't create an account with HealthCopilot, please ignore this email.
+          If you didn't create an account with HealthCopilot, please ignore this email. Never share your OTP with anyone.
         </p>
       </div>
     `;
@@ -173,10 +173,11 @@ Hi ${name || 'there'},
 
 Please verify your HealthCopilot account.
 
-Click the link below to verify your email address:
-${verifyUrl}
+Your 6-digit OTP code: ${code}
+(Valid for 5 minutes only. Single-use).
 
-Or enter your 6-digit code: ${code} (Expires in 24 hours).
+Or click the link below to verify your email address:
+${verifyUrl}
 
 If you did not request this email, please ignore it.
     `.trim();

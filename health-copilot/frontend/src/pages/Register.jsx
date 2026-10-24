@@ -35,8 +35,14 @@ const Register = () => {
   const [resendingEmail, setResendingEmail] = useState(false);
   const [resendNotice, setResendNotice] = useState('');
 
-  const { register, googleLogin, resendVerification } = useAuth();
+  const { user, register, googleLogin, resendVerification } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (user && user.isEmailVerified) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const validateEmailFormat = (val) => {
     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val.trim());
@@ -112,8 +118,8 @@ const Register = () => {
         formData.confirmPassword
       );
 
-      // Account created immediately, navigate directly to dashboard
-      navigate('/dashboard', { replace: true });
+      // Account created in unverified state; direct user to enter the 6-digit email OTP
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email.trim())}`, { replace: true });
     } catch (err) {
       if (err.status === 409) {
         setErrorMsg('An account with this email already exists. Please sign in instead.');

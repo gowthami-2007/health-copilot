@@ -8,6 +8,7 @@ const {
   validateResetPassword,
 } = require('../validators/authValidator');
 const { successResponse } = require('../utils/apiResponse');
+const { setAuthCookie, clearAuthCookie } = require('../utils/cookieHelper');
 
 class AuthController {
   async register(req, res, next) {
@@ -30,6 +31,9 @@ class AuthController {
       };
       const validatedData = validateEmailVerification(inputData);
       const result = await authService.verifyEmail(validatedData);
+      if (result.token) {
+        setAuthCookie(res, result.token, true);
+      }
       return successResponse(res, result.message, result, 200);
     } catch (error) {
       next(error);
@@ -50,6 +54,10 @@ class AuthController {
     try {
       const validatedData = validateLogin(req.body);
       const result = await authService.login(validatedData);
+      const rememberMe = req.body.rememberMe !== false;
+      if (result.token) {
+        setAuthCookie(res, result.token, rememberMe);
+      }
       return successResponse(res, 'Login successful', result, 200);
     } catch (error) {
       next(error);
@@ -60,6 +68,9 @@ class AuthController {
     try {
       const idToken = req.body.idToken || req.body.credential;
       const result = await authService.googleAuth({ idToken });
+      if (result.token) {
+        setAuthCookie(res, result.token, true);
+      }
       return successResponse(
         res,
         result.isNewUser ? 'Google account registered successfully' : 'Google sign-in successful',
@@ -102,6 +113,7 @@ class AuthController {
 
   async logout(req, res, next) {
     try {
+      clearAuthCookie(res);
       return successResponse(res, 'Logged out successfully', {}, 200);
     } catch (error) {
       next(error);
