@@ -3,6 +3,7 @@ const aiServiceClient = require('../services/aiServiceClient');
 const documentService = require('../services/documentService');
 const Document = require('../models/Document');
 const { BadRequestError, NotFoundError, ForbiddenError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class AIController {
   /**
@@ -69,7 +70,7 @@ class AIController {
         history,
         attachments: Array.isArray(attachments) ? attachments : [],
         preferredLanguage: effectiveLang,
-        patientProfileId: patientProfileId || null,
+        patientProfileId: sanitizeObjectId(patientProfileId),
       });
 
       return res.status(200).json({

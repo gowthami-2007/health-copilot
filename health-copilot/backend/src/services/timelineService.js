@@ -2,13 +2,15 @@ const Timeline = require('../models/Timeline');
 const Document = require('../models/Document');
 const Appointment = require('../models/Appointment');
 const Medication = require('../models/Medication');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class TimelineService {
   /**
    * Generates a comprehensive, chronological health timeline for a patient.
    */
   async getTimeline(userId, patientProfileId = null) {
-    const profileFilter = patientProfileId ? { patientProfileId } : {};
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
+    const profileFilter = cleanProfileId ? { patientProfileId: cleanProfileId } : {};
 
     // 1. Fetch direct timeline records
     const timelineEvents = await Timeline.find({ userId, ...profileFilter }).sort({ date: -1 });

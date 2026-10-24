@@ -7,19 +7,26 @@ const PatientProfile = require('../models/PatientProfile');
 const AgentAction = require('../models/AgentAction');
 const WellnessRecommendation = require('../models/WellnessRecommendation');
 const healthTrendsService = require('./healthTrendsService');
+const patientProfileService = require('./patientProfileService');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class DashboardService {
   async getDashboardData(userId, patientProfileId = null) {
     // 1. Fetch user profile for customized greeting
     const user = await User.findById(userId).select('name email preferredLanguage');
 
-    // 2. Resolve active patient profile
+    // 2. Resolve active patient profile safely
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     let activeProfile = null;
-    if (patientProfileId) {
-      activeProfile = await PatientProfile.findOne({ _id: patientProfileId, userId });
+    if (cleanProfileId) {
+      activeProfile = await PatientProfile.findOne({ _id: cleanProfileId, userId });
     }
     if (!activeProfile) {
       activeProfile = await PatientProfile.findOne({ userId, isPrimary: true });
+    }
+    if (!activeProfile) {
+      const profiles = await patientProfileService.getProfiles(userId);
+      activeProfile = profiles[0] || null;
     }
 
     const profileFilter = activeProfile ? { patientProfileId: activeProfile._id } : {};

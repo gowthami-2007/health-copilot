@@ -1,9 +1,11 @@
 const agentService = require('../services/agentService');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class AgentController {
   async getActions(req, res, next) {
     try {
-      const { status, patientProfileId } = req.query;
+      const { status } = req.query;
+      const patientProfileId = sanitizeObjectId(req.query.patientProfileId);
       const actions = await agentService.getActions(req.user.id, status, patientProfileId);
       res.status(200).json({
         success: true,
@@ -17,7 +19,7 @@ class AgentController {
 
   async scanActions(req, res, next) {
     try {
-      const { patientProfileId } = req.body;
+      const patientProfileId = sanitizeObjectId(req.body?.patientProfileId || req.query?.patientProfileId);
       const newActions = await agentService.scanAndGenerateActions(req.user.id, patientProfileId);
       res.status(200).json({
         success: true,

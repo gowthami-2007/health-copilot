@@ -45,16 +45,16 @@ const HealthTrends = () => {
     try {
       setLoading(true);
       setError(null);
-      const profileId = activeProfile?._id;
+      const profileId = activeProfile?._id || null;
       const [trendRes, insightRes] = await Promise.all([
-        trendService.getTrends({ patientProfileId: profileId }),
-        trendService.getInsights({ patientProfileId: profileId }),
+        trendService.getTrends(profileId),
+        trendService.getInsights(profileId),
       ]);
-      setTrendsData(trendRes?.data?.trends || {});
-      setInsights(insightRes?.data?.insights || []);
+      setTrendsData(trendRes?.data?.data?.trends || trendRes?.data?.trends || {});
+      setInsights(insightRes?.data?.data?.insights || insightRes?.data?.insights || []);
     } catch (err) {
       console.error('Failed to load health trends:', err);
-      setError('Unable to load health trends. Please try again.');
+      setError(err.response?.data?.message || 'Unable to load health trends. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -258,25 +258,6 @@ const HealthTrends = () => {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Refresh Trends</span>
           </button>
-        </div>
-
-        {/* Clinical Safety Non-diagnostic notice */}
-        <div style={{
-          backgroundColor: '#fffbeb',
-          border: '1px solid #fde68a',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          fontSize: '0.8rem',
-          color: '#92400e'
-        }}>
-          <ShieldAlert size={18} style={{ flexShrink: 0 }} />
-          <div>
-            <strong>Medical Notice:</strong> Trend lines reflect explicit laboratory documents stored in your vault.
-            Trends do not constitute a standalone medical diagnosis. Always discuss historical trends with your physician.
-          </div>
         </div>
 
         {/* Metric Selector Tabs */}

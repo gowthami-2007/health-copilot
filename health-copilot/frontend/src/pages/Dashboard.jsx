@@ -297,21 +297,20 @@ const Dashboard = () => {
                                 obs.abnormalFlag === 'HIGH'
                                   ? '#fef2f2'
                                   : obs.abnormalFlag === 'LOW'
-                                  ? '#eff6ff'
-                                  : '#ecfdf5',
+                                    ? '#eff6ff'
+                                    : '#ecfdf5',
                               color:
                                 obs.abnormalFlag === 'HIGH'
                                   ? '#dc2626'
                                   : obs.abnormalFlag === 'LOW'
-                                  ? '#2563eb'
-                                  : '#059669',
-                              border: `1px solid ${
-                                obs.abnormalFlag === 'HIGH'
+                                    ? '#2563eb'
+                                    : '#059669',
+                              border: `1px solid ${obs.abnormalFlag === 'HIGH'
                                   ? '#fecaca'
                                   : obs.abnormalFlag === 'LOW'
-                                  ? '#bfdbfe'
-                                  : '#a7f3d0'
-                              }`,
+                                    ? '#bfdbfe'
+                                    : '#a7f3d0'
+                                }`,
                             }}
                           >
                             {obs.abnormalFlag || 'NORMAL'}

@@ -2,6 +2,7 @@ const Appointment = require('../models/Appointment');
 const Document = require('../models/Document');
 const Timeline = require('../models/Timeline');
 const { NotFoundError, ForbiddenError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class AppointmentService {
   async createAppointment(userId, data) {
@@ -39,6 +40,7 @@ class AppointmentService {
   }
 
   async getAppointments(userId, status = null, type = null, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const query = { userId };
     if (status && status !== 'ALL') {
       query.status = status;
@@ -46,8 +48,8 @@ class AppointmentService {
     if (type && type !== 'ALL') {
       query.type = type.toUpperCase();
     }
-    if (patientProfileId) {
-      query.patientProfileId = patientProfileId;
+    if (cleanProfileId) {
+      query.patientProfileId = cleanProfileId;
     }
     const appointments = await Appointment.find(query)
       .populate('sourceDocumentId', 'fileName fileUrl documentType')
@@ -65,6 +67,7 @@ class AppointmentService {
   }
 
   async getOverdueFollowups(userId, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const now = new Date();
     const query = {
       userId,
@@ -74,8 +77,8 @@ class AppointmentService {
         { date: { $lt: now } },
       ],
     };
-    if (patientProfileId) {
-      query.patientProfileId = patientProfileId;
+    if (cleanProfileId) {
+      query.patientProfileId = cleanProfileId;
     }
     return await Appointment.find(query)
       .populate('sourceDocumentId', 'fileName fileUrl documentType')

@@ -2,6 +2,7 @@ const Medication = require('../models/Medication');
 const Timeline = require('../models/Timeline');
 const schedulerService = require('./schedulerService');
 const { NotFoundError, ForbiddenError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class MedicationService {
   /**
@@ -63,12 +64,13 @@ class MedicationService {
   }
 
   async getMedications(userId, status = null, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const query = { userId };
     if (status && status !== 'ALL') {
       query.status = status;
     }
-    if (patientProfileId) {
-      query.patientProfileId = patientProfileId;
+    if (cleanProfileId) {
+      query.patientProfileId = cleanProfileId;
     }
     return await Medication.find(query).sort({ createdAt: -1 });
   }

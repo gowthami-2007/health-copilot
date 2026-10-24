@@ -4,6 +4,7 @@ const Document = require('../models/Document');
 const Medication = require('../models/Medication');
 const Appointment = require('../models/Appointment');
 const healthTrendsService = require('./healthTrendsService');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class WellnessService {
   /**
@@ -11,9 +12,10 @@ class WellnessService {
    */
   async getRecommendations(userId, patientProfileId = null) {
     // 1. Resolve patient profile
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     let profile = null;
-    if (patientProfileId) {
-      profile = await PatientProfile.findOne({ _id: patientProfileId, userId });
+    if (cleanProfileId) {
+      profile = await PatientProfile.findOne({ _id: cleanProfileId, userId });
     }
     if (!profile) {
       profile = await PatientProfile.findOne({ userId, isPrimary: true });

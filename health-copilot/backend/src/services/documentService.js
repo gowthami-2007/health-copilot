@@ -9,6 +9,7 @@ const medicalExtractionService = require('./medicalExtractionService');
 const fhirService = require('./fhirService');
 const { processDocumentFile } = require('../../../document-service/src/processing/documentProcessor');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class DocumentService {
   /**
@@ -56,10 +57,11 @@ class DocumentService {
 
     const cleanFilename = path.basename(file.filename);
     const storagePath = path.join(userId.toString(), cleanFilename);
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
 
     const newDoc = new Document({
       userId,
-      patientProfileId: patientProfileId || null,
+      patientProfileId: cleanProfileId,
       fileName: file.originalname,
       fileUrl: '/api/documents/pending/file',
       storagePath,
@@ -368,10 +370,11 @@ class DocumentService {
    * Gets all documents belonging to the authenticated user.
    */
   async getUserDocuments(userId, { type, search, sort = 'desc', patientProfileId = null } = {}) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const query = { userId };
 
-    if (patientProfileId) {
-      query.patientProfileId = patientProfileId;
+    if (cleanProfileId) {
+      query.patientProfileId = cleanProfileId;
     }
 
     if (type && type !== 'all') {

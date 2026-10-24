@@ -1,6 +1,7 @@
 const PatientProfile = require('../models/PatientProfile');
 const User = require('../models/User');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class PatientProfileService {
   /**
@@ -33,7 +34,11 @@ class PatientProfileService {
    * Retrieves a single patient profile by ID, strictly enforcing user ownership.
    */
   async getProfileById(userId, profileId) {
-    const profile = await PatientProfile.findOne({ _id: profileId, userId });
+    const cleanId = sanitizeObjectId(profileId);
+    if (!cleanId) {
+      throw new NotFoundError('Patient profile not found or invalid ID.');
+    }
+    const profile = await PatientProfile.findOne({ _id: cleanId, userId });
     if (!profile) {
       throw new NotFoundError('Patient profile not found or access denied.');
     }
@@ -132,8 +137,9 @@ class PatientProfileService {
    * Helper to resolve active profile ID for data queries.
    */
   async resolveProfileId(userId, requestedProfileId = null) {
-    if (requestedProfileId) {
-      const profile = await PatientProfile.findOne({ _id: requestedProfileId, userId });
+    const cleanId = sanitizeObjectId(requestedProfileId);
+    if (cleanId) {
+      const profile = await PatientProfile.findOne({ _id: cleanId, userId });
       if (profile) return profile._id;
     }
     const primary = await PatientProfile.findOne({ userId, isPrimary: true });

@@ -1,9 +1,10 @@
 const wellnessService = require('../services/wellnessService');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class WellnessController {
   async getRecommendations(req, res, next) {
     try {
-      const { patientProfileId } = req.query;
+      const patientProfileId = sanitizeObjectId(req.query.patientProfileId);
       const recommendations = await wellnessService.getRecommendations(req.user.id, patientProfileId);
       res.status(200).json({
         success: true,

@@ -8,6 +8,7 @@ const medicationService = require('./medicationService');
 const appointmentService = require('./appointmentService');
 const healthTrendsService = require('./healthTrendsService');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/errors');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 class AgentService {
   /**
@@ -24,11 +25,12 @@ class AgentService {
    * Scans a patient's records to proactively detect events and prepare proposed actions.
    */
   async scanAndGenerateActions(userId, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const actionsGenerated = [];
 
     // 1. Scan Processed Documents for Prescriptions with missing reminders
     const docQuery = { userId, status: 'PROCESSED' };
-    if (patientProfileId) docQuery.patientProfileId = patientProfileId;
+    if (cleanProfileId) docQuery.patientProfileId = cleanProfileId;
 
     const documents = await Document.find(docQuery).sort({ createdAt: -1 }).limit(10);
 
@@ -173,9 +175,10 @@ class AgentService {
    * Retrieves all agent actions for a user, optionally filtered by status and profile.
    */
   async getActions(userId, status = null, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const query = { userId };
     if (status && status !== 'ALL') query.status = status;
-    if (patientProfileId) query.patientProfileId = patientProfileId;
+    if (cleanProfileId) query.patientProfileId = cleanProfileId;
 
     return await AgentAction.find(query).sort({ createdAt: -1 });
   }

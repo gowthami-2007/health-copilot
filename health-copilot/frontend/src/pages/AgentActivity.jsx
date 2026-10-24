@@ -31,13 +31,11 @@ const AgentActivity = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await agentService.getActions({
-        patientProfileId: activeProfile?._id,
-      });
-      setActions(res?.data?.actions || []);
+      const res = await agentService.getActions(null, activeProfile?._id || null);
+      setActions(res?.data?.data?.actions || res?.data?.actions || []);
     } catch (err) {
       console.error('Failed to load agent actions:', err);
-      setError('Unable to load agent activity.');
+      setError(err.response?.data?.message || 'Unable to load agent activity.');
     } finally {
       setLoading(false);
     }
@@ -50,14 +48,12 @@ const AgentActivity = () => {
   const handleScan = async () => {
     try {
       setScanning(true);
-      const res = await agentService.scanActions({
-        patientProfileId: activeProfile?._id,
-      });
+      const res = await agentService.scanActions(activeProfile?._id || null);
       await fetchActions();
-      const count = res?.data?.newActionsCount || 0;
-      alert(`Agent scan complete! Found ${count} new proactive action(s).`);
+      const count = res?.data?.data?.actions?.length || res?.data?.newActionsCount || 0;
+      alert(`Agent scan complete! Found ${count} proactive action proposal(s).`);
     } catch (err) {
-      alert('Agent scan failed: ' + err.message);
+      alert('Agent scan failed: ' + (err.response?.data?.message || err.message));
     } finally {
       setScanning(false);
     }

@@ -1,15 +1,39 @@
 import api from './api';
 
+const extractId = (param) => {
+  if (!param) return null;
+  const id = typeof param === 'object' ? (param.patientProfileId || param._id || param.id) : param;
+  if (!id || id === 'undefined' || id === 'null' || id === '[object Object]') return null;
+  return id;
+};
+
 export const agentService = {
-  async getActions(status = null, patientProfileId = null) {
+  async getActions(statusOrFilter = null, patientProfileId = null) {
     const params = {};
-    if (status && status !== 'ALL') params.status = status;
-    if (patientProfileId) params.patientProfileId = patientProfileId;
+    let status = statusOrFilter;
+    let profileId = patientProfileId;
+
+    if (typeof statusOrFilter === 'object' && statusOrFilter !== null) {
+      status = statusOrFilter.status || null;
+      profileId = statusOrFilter.patientProfileId || statusOrFilter._id || statusOrFilter.id || null;
+    }
+
+    if (status && status !== 'ALL' && typeof status === 'string') {
+      params.status = status;
+    }
+
+    const cleanId = extractId(profileId);
+    if (cleanId) {
+      params.patientProfileId = cleanId;
+    }
+
     return await api.get('/agent/actions', { params });
   },
 
-  async scanActions(patientProfileId = null) {
-    return await api.post('/agent/scan', { patientProfileId });
+  async scanActions(param = null) {
+    const cleanId = extractId(param);
+    const payload = cleanId ? { patientProfileId: cleanId } : {};
+    return await api.post('/agent/scan', payload);
   },
 
   async approveAction(id, editData = {}) {

@@ -1,10 +1,18 @@
 import api from './api';
 
+const extractId = (param) => {
+  if (!param) return null;
+  const id = typeof param === 'object' ? (param.patientProfileId || param._id || param.id) : param;
+  if (!id || id === 'undefined' || id === 'null' || id === '[object Object]') return null;
+  return id;
+};
+
 export const medicationService = {
   async getMedications(status, patientProfileId = null) {
     const params = {};
     if (status && status !== 'ALL') params.status = status;
-    if (patientProfileId) params.patientProfileId = patientProfileId;
+    const cleanId = extractId(patientProfileId);
+    if (cleanId) params.patientProfileId = cleanId;
     return await api.get('/medications', { params });
   },
 

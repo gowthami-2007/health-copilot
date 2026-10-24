@@ -1,5 +1,6 @@
 const Document = require('../models/Document');
 const Appointment = require('../models/Appointment');
+const { sanitizeObjectId } = require('../utils/idSanitizer');
 
 // Standardized clinical lab metric definitions
 const TRACKED_METRICS = [
@@ -100,9 +101,10 @@ class HealthTrendsService {
    * Retrieves and computes longitudinal health trends for a patient profile.
    */
   async getTrends(userId, patientProfileId = null) {
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
     const docQuery = { userId, status: 'PROCESSED' };
-    if (patientProfileId) {
-      docQuery.patientProfileId = patientProfileId;
+    if (cleanProfileId) {
+      docQuery.patientProfileId = cleanProfileId;
     }
 
     const documents = await Document.find(docQuery)
@@ -231,7 +233,8 @@ class HealthTrendsService {
    * Generates actionable preventive insights combining abnormal labs, repeat testing intervals, and overdue visits.
    */
   async getPreventiveInsights(userId, patientProfileId = null) {
-    const trends = await this.getTrends(userId, patientProfileId);
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
+    const trends = await this.getTrends(userId, cleanProfileId);
     const insights = [];
 
     // 1. Identify abnormal and worsening trends
@@ -268,7 +271,7 @@ class HealthTrendsService {
       status: 'UPCOMING',
       date: { $lt: new Date() },
     };
-    if (patientProfileId) overdueQuery.patientProfileId = patientProfileId;
+    if (cleanProfileId) overdueQuery.patientProfileId = cleanProfileId;
 
     const overdueApts = await Appointment.find(overdueQuery).sort({ date: 1 });
     for (const apt of overdueApts) {

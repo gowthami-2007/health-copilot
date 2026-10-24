@@ -41,13 +41,11 @@ const Wellness = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await wellnessService.getRecommendations({
-        patientProfileId: activeProfile?._id,
-      });
-      setRecommendations(res?.data?.recommendations || []);
+      const res = await wellnessService.getRecommendations(activeProfile?._id || null);
+      setRecommendations(res?.data?.data?.recommendations || res?.data?.recommendations || []);
     } catch (err) {
       console.error('Failed to load wellness recommendations:', err);
-      setError('Unable to load recommendations. Please try again.');
+      setError(err.response?.data?.message || 'Unable to load recommendations. Please try again.');
     } finally {
       setLoading(false);
     }
