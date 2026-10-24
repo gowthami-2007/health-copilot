@@ -487,6 +487,120 @@ class DocumentService {
 
     return { message: 'Document and associated data deleted successfully.' };
   }
+
+  /**
+   * Saves a user-reviewed & verified prescription image and clinical data to the vault.
+   * Associates document ownership strictly with req.user.id.
+   */
+  async saveReviewedPrescriptionDocument({ userId, file, prescriptionData, patientProfileId = null }) {
+    if (!file) {
+      throw new BadRequestError('Prescription image file is required');
+    }
+
+    const cleanFilename = path.basename(file.filename);
+    const storagePath = path.join(userId.toString(), cleanFilename);
+    const cleanProfileId = sanitizeObjectId(patientProfileId);
+
+    // Parse verified prescription clinical details
+    let parsedData = {};
+    if (typeof prescriptionData === 'string') {
+      try {
+        parsedData = JSON.parse(prescriptionData);
+      } catch (e) {
+        parsedData = {};
+      }
+    } else if (typeof prescriptionData === 'object' && prescriptionData !== null) {
+      parsedData = prescriptionData;
+    }
+
+    const doctorName = parsedData.doctor?.name || '';
+    const hospitalName = parsedData.hospital?.name || '';
+    const patientName = parsedData.patient?.name || '';
+    const prescriptionDate = parsedData.prescriptionDate ? new Date(parsedData.prescriptionDate) : new Date();
+
+    // Map medicines to Document.structuredData.prescriptions
+    const prescriptions = (parsedData.medicines || []).map((m) => ({
+      medicationName: m.normalizedName || m.nameAsWritten || 'Prescribed Medicine',
+      dosage: m.strength || m.dosageInstructions || 'As directed',
+      frequency: m.frequency || 'Daily',
+      route: m.route || 'Oral',
+      duration: m.duration || 'As prescribed',
+      quantity: '# 1 pack',
+      instructions: [m.additionalInstructions, m.dosageInstructions].filter(Boolean).join('; '),
+      prescribingDoctor: doctorName,
+      registrationNumber: parsedData.doctor?.regNumber || '',
+      isCurrentMedication: true,
+      verificationStatus: 'VERIFIED',
+    }));
+
+    // Create summary
+    const summary = {
+      overview: `Prescription issued by ${doctorName || 'attending physician'}${hospitalName ? ` at ${hospitalName}` : ''}. Verified and reviewed by patient.`,
+      keyFindings: parsedData.diagnosis || ['Medical prescription registered.'],
+      abnormalResults: [],
+      possibleMeanings: 'Doctor-prescribed medication plan reviewed and confirmed.',
+      medicinesAndInstructions: prescriptions.map((p) => `${p.medicationName}: ${p.dosage} (${p.frequency}) - ${p.instructions}`),
+      questionsForDoctor: parsedData.followUpInstructions || [],
+      keyInformation: [
+        `Doctor: ${doctorName || 'Not specified'}`,
+        `Facility: ${hospitalName || 'Not specified'}`,
+        `Patient: ${patientName || 'Verified user'}`,
+      ],
+      datesMentioned: [prescriptionDate.toISOString().split('T')[0]],
+      medicationsMentioned: prescriptions.map((p) => p.medicationName),
+      testsMentioned: parsedData.investigations || [],
+      doctorQuestions: parsedData.followUpInstructions || [],
+    };
+
+    const newDoc = new Document({
+      userId,
+      patientProfileId: cleanProfileId,
+      fileName: file.originalname,
+      fileUrl: '/api/documents/pending/file',
+      storagePath,
+      fileType: file.mimetype,
+      fileSize: file.size,
+      documentType: 'Prescription',
+      status: 'PROCESSED',
+      rawOcrOutput: JSON.stringify(parsedData),
+      extractedText: prescriptions.map((p) => `${p.medicationName} ${p.dosage} ${p.frequency}`).join('\n'),
+      summary,
+      structuredData: {
+        patientName,
+        patientAge: parseInt(parsedData.patient?.age, 10) || null,
+        patientSex: parsedData.patient?.sex || '',
+        healthcareProvider: hospitalName,
+        doctorRegistration: parsedData.doctor?.regNumber || '',
+        documentDate: isNaN(prescriptionDate.getTime()) ? new Date() : prescriptionDate,
+        diagnoses: parsedData.diagnosis || [],
+        reviewStatus: 'VERIFIED',
+        confidenceScore: 0.98,
+        labResults: [],
+        prescriptions,
+      },
+    });
+
+    newDoc.fileUrl = `/api/documents/${newDoc._id}/file`;
+    await newDoc.save();
+
+    // Create Timeline entry for this verified prescription
+    try {
+      await Timeline.create({
+        userId,
+        eventType: 'PRESCRIPTION',
+        title: `Prescription: ${doctorName || hospitalName || 'Physician Consultation'}`,
+        description: `Verified ${prescriptions.length} prescribed medication(s): ${prescriptions.map((p) => p.medicationName).join(', ')}`,
+        eventDate: isNaN(prescriptionDate.getTime()) ? new Date() : prescriptionDate,
+        source: 'MANUAL_VERIFIED',
+        referenceId: newDoc._id,
+        referenceModel: 'Document',
+      });
+    } catch (timelineErr) {
+      console.warn('Could not create timeline entry for prescription:', timelineErr.message);
+    }
+
+    return newDoc;
+  }
 }
 
 module.exports = new DocumentService();

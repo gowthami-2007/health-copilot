@@ -13,7 +13,7 @@ const DOCUMENT_TYPES = [
   'Other',
 ];
 
-const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
+const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor }) => {
   const [file, setFile] = useState(null);
   const [documentType, setDocumentType] = useState('Blood Report');
   const [dragActive, setDragActive] = useState(false);
@@ -50,9 +50,9 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
 
   const handleFileSelected = (selectedFile) => {
     setErrorMsg('');
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(selectedFile.type)) {
-      setErrorMsg('Invalid file format. Please upload a PDF, JPG, or PNG document.');
+      setErrorMsg('Invalid file format. Please upload a PDF, JPG, PNG, or WEBP document.');
       return;
     }
 
@@ -208,6 +208,44 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
         </select>
       </div>
 
+      {/* Suggestion banner if Prescription is chosen */}
+      {documentType === 'Prescription' && onOpenPrescriptionExtractor && (
+        <div
+          style={{
+            padding: '0.75rem 1rem',
+            backgroundColor: '#f0fdfa',
+            border: '1px solid #99f6e4',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ fontSize: '0.825rem', color: '#115e59' }}>
+            <strong>Handwritten Prescription?</strong> Use our Multimodal AI Vision reader to interpret cursive doctor handwriting and verify dosages interactively.
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPrescriptionExtractor}
+            style={{
+              padding: '0.35rem 0.75rem',
+              backgroundColor: '#0d9488',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.775rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Open Vision Reader
+          </button>
+        </div>
+      )}
+
       {/* Drag & Drop Area */}
       <div
         onDragEnter={handleDrag}
@@ -229,7 +267,7 @@ const DocumentUpload = ({ onUploadSuccess, onCancel }) => {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
+          accept=".pdf,.png,.jpg,.jpeg,.webp"
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />

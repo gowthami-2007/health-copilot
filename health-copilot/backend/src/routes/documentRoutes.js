@@ -8,6 +8,32 @@ const upload = require('../middleware/uploadMiddleware');
 // Every document operation requires verified JWT credentials
 router.use(protect);
 
+// Helper middleware for prescription upload accepting either 'image' or 'file' field
+const { uploadImageOnly } = upload;
+const prescriptionUpload = (req, res, next) => {
+  const handler = (uploadImageOnly || upload).fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+  ]);
+  handler(req, res, (err) => {
+    if (err) return next(err);
+    if (req.files) {
+      req.file = req.files['image']?.[0] || req.files['file']?.[0];
+    }
+    next();
+  });
+};
+
+// AI-powered prescription image extraction (Multimodal Vision - JPEG/PNG/WEBP only)
+router.post('/analyze-prescription', prescriptionUpload, (req, res, next) =>
+  documentController.analyzePrescription(req, res, next)
+);
+
+// Save user-reviewed & confirmed prescription to document vault
+router.post('/save-prescription', prescriptionUpload, (req, res, next) =>
+  documentController.saveReviewedPrescription(req, res, next)
+);
+
 // Upload: saves file associated with req.user.id
 router.post('/', upload.single('file'), (req, res, next) => documentController.upload(req, res, next));
 

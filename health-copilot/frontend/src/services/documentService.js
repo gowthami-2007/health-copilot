@@ -19,6 +19,48 @@ export const documentService = {
     });
   },
 
+  /**
+   * Analyzes a prescription image using multimodal AI vision.
+   * Sends actual image file directly to vision backend.
+   */
+  async analyzePrescription(file, onProgress) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    return await api.post('/documents/analyze-prescription', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+  },
+
+  /**
+   * Saves confirmed, user-reviewed prescription image and structured data to the vault.
+   */
+  async saveReviewedPrescription(file, prescriptionData, patientProfileId = null) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append(
+      'prescriptionData',
+      typeof prescriptionData === 'string' ? prescriptionData : JSON.stringify(prescriptionData)
+    );
+    if (patientProfileId) {
+      formData.append('patientProfileId', patientProfileId);
+    }
+
+    return await api.post('/documents/save-prescription', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
   async getDocuments(params = {}) {
     return await api.get('/documents', { params });
   },

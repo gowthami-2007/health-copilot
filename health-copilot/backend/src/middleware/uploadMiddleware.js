@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const config = require('../config/env');
 const { BadRequestError } = require('../utils/errors');
-const { ALLOWED_MIME_TYPES } = require('../../../document-service/src/validation/fileValidator');
+const { ALLOWED_MIME_TYPES, ALLOWED_IMAGE_MIME_TYPES } = require('../../../document-service/src/validation/fileValidator');
 
 // Ensure uploads directory exists
 if (!fs.existsSync(config.uploadDir)) {
@@ -37,7 +37,7 @@ const fileFilter = (req, file, cb) => {
   } else {
     cb(
       new BadRequestError(
-        'Invalid file type. Supported formats are PDF (.pdf) and images (.png, .jpg, .jpeg).'
+        'Invalid file type. Supported formats are PDF (.pdf) and images (.png, .jpg, .jpeg, .webp).'
       ),
       false
     );
@@ -52,4 +52,26 @@ const upload = multer({
   fileFilter,
 });
 
+const uploadImageOnly = multer({
+  storage,
+  limits: {
+    fileSize: config.maxFileSize,
+  },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new BadRequestError(
+          'Invalid file type. Prescription vision analysis requires an image (.png, .jpg, .jpeg, .webp). PDF and non-image files are not supported for image extraction.'
+        ),
+        false
+      );
+    }
+  },
+});
+
 module.exports = upload;
+module.exports.upload = upload;
+module.exports.uploadImageOnly = uploadImageOnly;
+

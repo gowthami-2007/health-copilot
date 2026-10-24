@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/common/Layout';
 import DocumentList from '../components/documents/DocumentList';
 import DocumentUpload from '../components/documents/DocumentUpload';
+import PrescriptionExtractorModal from '../components/documents/PrescriptionExtractorModal';
 import Modal from '../components/common/Modal';
 import Loader from '../components/common/Loader';
 import ErrorMessage from '../components/common/ErrorMessage';
 import documentService from '../services/documentService';
-import { UploadCloud, Plus } from 'lucide-react';
+import { UploadCloud, Plus, Sparkles } from 'lucide-react';
 import Button from '../components/common/Button';
 import useLanguage from '../hooks/useLanguage';
 
@@ -16,6 +17,7 @@ const Documents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -79,14 +81,31 @@ const Documents = () => {
           </p>
         </div>
 
-        <Button
-          id="open-upload-modal-btn"
-          variant="primary"
-          onClick={() => setIsUploadModalOpen(true)}
-          icon={Plus}
-        >
-          {t('documents.uploadBtn', 'Upload New Document')}
-        </Button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Button
+            id="open-prescription-ai-btn"
+            variant="outline"
+            onClick={() => setIsPrescriptionModalOpen(true)}
+            icon={Sparkles}
+            style={{
+              borderColor: '#0d9488',
+              color: '#0f766e',
+              backgroundColor: '#f0fdfa',
+              fontWeight: 600,
+            }}
+          >
+            {isTelugu ? 'AI ప్రిస్క్రిప్షన్ రీడర్' : 'AI Prescription Reader (Vision)'}
+          </Button>
+
+          <Button
+            id="open-upload-modal-btn"
+            variant="primary"
+            onClick={() => setIsUploadModalOpen(true)}
+            icon={Plus}
+          >
+            {t('documents.uploadBtn', 'Upload New Document')}
+          </Button>
+        </div>
       </div>
 
       <ErrorMessage message={error} onDismiss={() => setError(null)} />
@@ -105,7 +124,7 @@ const Documents = () => {
         />
       )}
 
-      {/* Upload Modal */}
+      {/* Standard Upload Modal */}
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
@@ -115,8 +134,21 @@ const Documents = () => {
         <DocumentUpload
           onUploadSuccess={handleUploadSuccess}
           onCancel={() => setIsUploadModalOpen(false)}
+          onOpenPrescriptionExtractor={() => {
+            setIsUploadModalOpen(false);
+            setIsPrescriptionModalOpen(true);
+          }}
         />
       </Modal>
+
+      {/* Multimodal Vision Prescription Extractor Modal */}
+      <PrescriptionExtractorModal
+        isOpen={isPrescriptionModalOpen}
+        onClose={() => setIsPrescriptionModalOpen(false)}
+        onSaveSuccess={() => {
+          fetchDocuments();
+        }}
+      />
     </Layout>
   );
 };

@@ -1,8 +1,11 @@
 const path = require('path');
 const fs = require('fs');
 const documentService = require('../services/documentService');
+const prescriptionVisionService = require('../services/prescriptionVisionService');
+const { validatePrescriptionImage } = require('../../../document-service/src/validation/fileValidator');
 const { validateDocumentUpload } = require('../validators/documentValidator');
 const { successResponse } = require('../utils/apiResponse');
+const { BadRequestError } = require('../utils/errors');
 
 class DocumentController {
   async upload(req, res, next) {
@@ -16,6 +19,76 @@ class DocumentController {
       });
 
       return successResponse(res, 'Document uploaded successfully', doc, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Analyzes an uploaded prescription image using multimodal AI vision.
+   * Extracts structured clinical data without prior text-only OCR garbling.
+   */
+  async analyzePrescription(req, res, next) {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new BadRequestError('Prescription image is required. Please upload a JPG, PNG, or WEBP image.');
+      }
+
+      // Deep validate file type, signature, and size
+      const validation = validatePrescriptionImage(file);
+      if (!validation.isValid) {
+        throw new BadRequestError(validation.error);
+      }
+
+      // Analyze image via multimodal vision model
+      const extraction = await prescriptionVisionService.analyzePrescriptionImage({
+        filePath: file.path,
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+      });
+
+      // Provide reference to uploaded image path so frontend can preview or save
+      const relativeFilePath = file.filename
+        ? `/api/documents/temp-preview/${encodeURIComponent(file.filename)}`
+        : null;
+
+      return successResponse(
+        res,
+        'Prescription analysis completed. Please review the extracted information.',
+        {
+          ...extraction,
+          tempFileName: file.filename || null,
+          tempFileUrl: relativeFilePath,
+          originalName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+        },
+        200
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Saves a user-reviewed & verified prescription image along with its confirmed clinical data.
+   */
+  async saveReviewedPrescription(req, res, next) {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new BadRequestError('Prescription image file is required to save to vault.');
+      }
+
+      const doc = await documentService.saveReviewedPrescriptionDocument({
+        userId: req.user.id,
+        file,
+        prescriptionData: req.body.prescriptionData,
+        patientProfileId: req.body.patientProfileId || null,
+      });
+
+      return successResponse(res, 'Prescription saved to medical vault successfully', doc, 201);
     } catch (error) {
       next(error);
     }

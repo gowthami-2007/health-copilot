@@ -5,9 +5,12 @@ const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',
+  'image/webp',
 ];
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.jpeg', '.jpg', '.png'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpeg', '.jpg', '.png', '.webp'];
+const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpeg', '.jpg', '.png', '.webp'];
 const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MIN_FILE_SIZE = 8; // At least enough bytes for magic header check
 
@@ -62,10 +65,25 @@ const validateFileSignature = (bufferOrPath) => {
       return { isValid: true, detectedType: 'image/png', error: null };
     }
 
+    // 4. WEBP signature: 'RIFF' at 0..3 and 'WEBP' at 8..11
+    if (
+      buf.length >= 12 &&
+      buf[0] === 0x52 &&
+      buf[1] === 0x49 &&
+      buf[2] === 0x46 &&
+      buf[3] === 0x46 &&
+      buf[8] === 0x57 &&
+      buf[9] === 0x45 &&
+      buf[10] === 0x42 &&
+      buf[11] === 0x50
+    ) {
+      return { isValid: true, detectedType: 'image/webp', error: null };
+    }
+
     return {
       isValid: false,
       detectedType: null,
-      error: 'File signature mismatch. The file content does not match supported PDF, JPEG, or PNG formats.',
+      error: 'File signature mismatch. The file content does not match supported PDF, JPEG, PNG, or WEBP formats.',
     };
   } catch (err) {
     return {
@@ -103,7 +121,7 @@ const validateFile = (file, maxSize = DEFAULT_MAX_FILE_SIZE) => {
   if (!ALLOWED_MIME_TYPES.includes(mimetype)) {
     return {
       isValid: false,
-      error: `Invalid file format (${mimetype || 'unknown'}). Only PDF, JPG, and PNG documents are allowed.`,
+      error: `Invalid file format (${mimetype || 'unknown'}). Only PDF, JPG, PNG, and WEBP documents are allowed.`,
     };
   }
 
@@ -113,7 +131,7 @@ const validateFile = (file, maxSize = DEFAULT_MAX_FILE_SIZE) => {
   if (dotIndex === -1 || dotIndex === originalName.length - 1) {
     return {
       isValid: false,
-      error: 'Missing file extension. Supported extensions: .pdf, .jpg, .jpeg, .png',
+      error: 'Missing file extension. Supported extensions: .pdf, .jpg, .jpeg, .png, .webp',
     };
   }
 
@@ -121,7 +139,7 @@ const validateFile = (file, maxSize = DEFAULT_MAX_FILE_SIZE) => {
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     return {
       isValid: false,
-      error: `Invalid file extension (${extension}). Supported extensions: .pdf, .jpg, .jpeg, .png`,
+      error: `Invalid file extension (${extension}). Supported extensions: .pdf, .jpg, .jpeg, .png, .webp`,
     };
   }
 
@@ -136,11 +154,78 @@ const validateFile = (file, maxSize = DEFAULT_MAX_FILE_SIZE) => {
   return { isValid: true, error: null };
 };
 
+/**
+ * Dedicated validator for Prescription Image Extraction.
+ * Strictly accepts images only (JPEG, PNG, WEBP) and rejects PDFs, executables, or corrupted files.
+ */
+const validatePrescriptionImage = (file, maxSize = DEFAULT_MAX_FILE_SIZE) => {
+  if (!file) {
+    return { isValid: false, error: 'No prescription image provided. Please select an image to upload.' };
+  }
+
+  const size = typeof file.size === 'number' ? file.size : 0;
+  if (size <= 0) {
+    return { isValid: false, error: 'The uploaded file is empty (0 bytes). Please select a valid prescription image.' };
+  }
+
+  if (size > maxSize) {
+    const maxMb = Math.round(maxSize / (1024 * 1024));
+    return {
+      isValid: false,
+      error: `Prescription image size (${(size / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum limit of ${maxMb}MB.`,
+    };
+  }
+
+  const mimetype = (file.mimetype || '').toLowerCase();
+  if (!ALLOWED_IMAGE_MIME_TYPES.includes(mimetype)) {
+    return {
+      isValid: false,
+      error: `Unsupported format (${mimetype || 'unknown'}). Please upload a prescription image in JPG, PNG, or WEBP format. PDF files are not supported for direct vision extraction.`,
+    };
+  }
+
+  const originalName = String(file.originalname || file.name || '');
+  const dotIndex = originalName.lastIndexOf('.');
+  if (dotIndex === -1 || dotIndex === originalName.length - 1) {
+    return {
+      isValid: false,
+      error: 'The uploaded file is missing a valid image extension (.jpg, .jpeg, .png, .webp).',
+    };
+  }
+
+  const extension = originalName.substring(dotIndex).toLowerCase();
+  if (!ALLOWED_IMAGE_EXTENSIONS.includes(extension)) {
+    return {
+      isValid: false,
+      error: `Invalid image extension (${extension}). Supported image formats: .jpg, .jpeg, .png, .webp`,
+    };
+  }
+
+  // Verify binary magic numbers
+  if (file.buffer || (file.path && typeof file.path === 'string')) {
+    const sigResult = validateFileSignature(file.buffer || file.path);
+    if (!sigResult.isValid) {
+      return { isValid: false, error: `Invalid image content: ${sigResult.error}` };
+    }
+    if (sigResult.detectedType === 'application/pdf') {
+      return {
+        isValid: false,
+        error: 'PDF documents cannot be analyzed by the image vision model. Please upload a clear photo or scan of the prescription (JPG, PNG, or WEBP).',
+      };
+    }
+  }
+
+  return { isValid: true, error: null };
+};
+
 module.exports = {
   validateFile,
   validateFileSignature,
+  validatePrescriptionImage,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_IMAGE_EXTENSIONS,
   DEFAULT_MAX_FILE_SIZE,
   MIN_FILE_SIZE,
 };
