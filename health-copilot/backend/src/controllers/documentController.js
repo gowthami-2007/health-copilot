@@ -2,15 +2,86 @@ const path = require('path');
 const fs = require('fs');
 const documentService = require('../services/documentService');
 const prescriptionVisionService = require('../services/prescriptionVisionService');
-const { validatePrescriptionImage } = require('../../../document-service/src/validation/fileValidator');
+const {
+  validateFile,
+  validatePrescriptionImage,
+} = require('../../../document-service/src/validation/fileValidator');
+const {
+  classifyDocument,
+} = require('../../../document-service/src/validation/medicalClassifier');
 const { validateDocumentUpload } = require('../validators/documentValidator');
 const { successResponse } = require('../utils/apiResponse');
-const { BadRequestError } = require('../utils/errors');
+const {
+  BadRequestError,
+  NonMedicalDocumentError,
+  DocumentClassificationUncertainError,
+  DocumentUnreadableError,
+} = require('../utils/errors');
 
 class DocumentController {
+  /**
+   * Safe helper to clean up rejected/unauthorized uploaded files from disk.
+   */
+  cleanupTempFile(file) {
+    if (file && file.path && fs.existsSync(file.path)) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch (e) {
+        // Ignore unlink failure if already removed
+      }
+    }
+  }
+
   async upload(req, res, next) {
     try {
+      const file = req.file;
+      if (!file) {
+        throw new BadRequestError('No file provided for upload');
+      }
+
       const { documentType } = validateDocumentUpload(req);
+
+      // 1. Deep file integrity & signature check
+      const formatValidation = validateFile(file);
+      if (!formatValidation.isValid) {
+        this.cleanupTempFile(file);
+        if (
+          formatValidation.error.includes('empty') ||
+          formatValidation.error.includes('signature') ||
+          formatValidation.error.includes('truncated')
+        ) {
+          throw new DocumentUnreadableError(formatValidation.error);
+        }
+        throw new BadRequestError(formatValidation.error);
+      }
+
+      // 2. AI-Powered Medical Document Classification
+      // Rejects non-medical documents BEFORE saving to database or running OCR/summaries
+      const classification = await classifyDocument({
+        filePath: file.path,
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        originalName: file.originalname,
+        documentType,
+        fileSize: file.size,
+      });
+
+      if (classification.status === 'not_health_related') {
+        this.cleanupTempFile(file);
+        throw new NonMedicalDocumentError(classification.errorMessage);
+      }
+
+      if (classification.status === 'uncertain') {
+        this.cleanupTempFile(file);
+        throw new DocumentClassificationUncertainError(classification.errorMessage);
+      }
+
+      if (classification.status === 'unreadable') {
+        this.cleanupTempFile(file);
+        throw new DocumentUnreadableError(classification.errorMessage);
+      }
+
+      // 3. Document confirmed health-related: proceed to vault upload and extraction pipeline
       const doc = await documentService.uploadDocument({
         userId: req.user.id,
         file: req.file,
@@ -20,6 +91,57 @@ class DocumentController {
 
       return successResponse(res, 'Document uploaded successfully', doc, 201);
     } catch (error) {
+      this.cleanupTempFile(req.file);
+      next(error);
+    }
+  }
+
+  /**
+   * Pre-validation endpoint to verify if a file is health-related before final upload.
+   */
+  async validate(req, res, next) {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new BadRequestError('No file provided for validation');
+      }
+
+      const classification = await classifyDocument({
+        filePath: file.path,
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        originalName: file.originalname,
+        documentType: req.body.documentType || 'Other',
+        fileSize: file.size,
+      });
+
+      this.cleanupTempFile(file);
+
+      if (classification.status === 'health_related') {
+        return successResponse(
+          res,
+          'Medical document detected. Processing can continue.',
+          {
+            classification: 'health_related',
+            confidence: classification.confidence,
+            detectedType: classification.detectedType,
+            message: 'Medical document detected. Processing can continue.',
+          },
+          200
+        );
+      }
+
+      if (classification.status === 'not_health_related') {
+        throw new NonMedicalDocumentError(classification.errorMessage);
+      }
+
+      if (classification.status === 'uncertain') {
+        throw new DocumentClassificationUncertainError(classification.errorMessage);
+      }
+
+      throw new DocumentUnreadableError(classification.errorMessage);
+    } catch (error) {
+      this.cleanupTempFile(req.file);
       next(error);
     }
   }
@@ -38,7 +160,31 @@ class DocumentController {
       // Deep validate file type, signature, and size
       const validation = validatePrescriptionImage(file);
       if (!validation.isValid) {
+        this.cleanupTempFile(file);
+        if (validation.error.includes('empty') || validation.error.includes('truncated')) {
+          throw new DocumentUnreadableError(validation.error);
+        }
         throw new BadRequestError(validation.error);
+      }
+
+      // Verify medical relevance of image before multimodal extraction
+      const classification = await classifyDocument({
+        filePath: file.path,
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        originalName: file.originalname,
+        documentType: 'Prescription',
+        fileSize: file.size,
+      });
+
+      if (classification.status === 'not_health_related') {
+        this.cleanupTempFile(file);
+        throw new NonMedicalDocumentError(classification.errorMessage);
+      }
+
+      if (classification.status === 'unreadable') {
+        this.cleanupTempFile(file);
+        throw new DocumentUnreadableError(classification.errorMessage);
       }
 
       // Analyze image via multimodal vision model
@@ -67,12 +213,14 @@ class DocumentController {
         200
       );
     } catch (error) {
+      this.cleanupTempFile(req.file);
       next(error);
     }
   }
 
   /**
    * Saves a user-reviewed & verified prescription image along with its confirmed clinical data.
+
    */
   async saveReviewedPrescription(req, res, next) {
     try {

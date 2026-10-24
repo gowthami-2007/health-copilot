@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle2, AlertCircle, AlertTriangle, ShieldAlert, Loader2 } from 'lucide-react';
 import Button from '../common/Button';
 import ErrorMessage from '../common/ErrorMessage';
 import documentService from '../../services/documentService';
@@ -17,8 +17,9 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
   const [file, setFile] = useState(null);
   const [documentType, setDocumentType] = useState('Blood Report');
   const [dragActive, setDragActive] = useState(false);
-  const [step, setStep] = useState('idle'); // 'idle' | 'uploading' | 'processing' | 'extracting' | 'summarizing' | 'complete' | 'error'
+  const [step, setStep] = useState('idle'); // 'idle' | 'uploading' | 'validating' | 'processing' | 'extracting' | 'summarizing' | 'complete' | 'error'
   const [errorMsg, setErrorMsg] = useState('');
+  const [validationError, setValidationError] = useState(null); // { title, message, code, type }
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const fileInputRef = useRef(null);
@@ -50,6 +51,7 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
 
   const handleFileSelected = (selectedFile) => {
     setErrorMsg('');
+    setValidationError(null);
     const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(selectedFile.type)) {
       setErrorMsg('Invalid file format. Please upload a PDF, JPG, PNG, or WEBP document.');
@@ -73,6 +75,7 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
     try {
       setStep('uploading');
       setErrorMsg('');
+      setValidationError(null);
 
       // Step: Uploading
       const response = await documentService.uploadDocument(file, documentType, (p) => {
@@ -82,6 +85,9 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
       const docId = response.data?._id;
 
       // Real pipeline progress steps & status verification
+      setStep('validating');
+      await new Promise((r) => setTimeout(r, 400));
+
       setStep('processing');
       let processedDoc = response.data;
 
@@ -123,18 +129,57 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
     } catch (err) {
       console.error('Upload error:', err);
       setStep('error');
-      setErrorMsg(err.message || 'Failed to upload and process document.');
+
+      const errorCode =
+        err.code ||
+        err.errorCode ||
+        (typeof err.error === 'object' ? err.error?.code : err.error);
+      const serverMessage =
+        err.message ||
+        (typeof err.error === 'object' ? err.error?.message : null) ||
+        'Failed to upload and process document.';
+
+      let title = 'Upload Failed';
+      let message = serverMessage;
+      let type = 'error';
+
+      if (errorCode === 'NON_MEDICAL_DOCUMENT') {
+        title = 'Invalid Document';
+        message =
+          'This file does not appear to be health-related. Please upload a medical prescription, laboratory report, medical certificate, discharge summary, or another healthcare document.';
+        type = 'rejected';
+      } else if (errorCode === 'DOCUMENT_CLASSIFICATION_UNCERTAIN') {
+        title = 'Unable to Verify Document';
+        message =
+          "We couldn't confidently determine whether this document is health-related. Please upload a clearer image or a readable PDF.";
+        type = 'uncertain';
+      } else if (errorCode === 'DOCUMENT_UNREADABLE') {
+        title = 'Unable to Read File';
+        message =
+          'This file is empty, corrupted, or unreadable. Please upload a valid PDF or a clear image.';
+        type = 'unreadable';
+      }
+
+      setValidationError({
+        title,
+        message,
+        code: errorCode || 'UPLOAD_ERROR',
+        type,
+      });
+      setErrorMsg(message);
     }
   };
 
   const renderStatusPipeline = () => {
     const steps = [
       { key: 'uploading', label: `Uploading file (${uploadProgress}%)...` },
+      { key: 'validating', label: 'Validating medical document authenticity...' },
       { key: 'processing', label: 'Processing document structure...' },
       { key: 'extracting', label: 'Extracting medical text & measurements...' },
       { key: 'summarizing', label: 'Generating AI summary & doctor questions...' },
       { key: 'complete', label: 'Complete! Document successfully organized.' },
     ];
+
 
     const currentIdx = steps.findIndex((s) => s.key === step);
 
@@ -190,7 +235,115 @@ const DocumentUpload = ({ onUploadSuccess, onCancel, onOpenPrescriptionExtractor
 
   return (
     <div>
-      <ErrorMessage message={errorMsg} onDismiss={() => setErrorMsg('')} />
+      {/* AI Document Validation Banner */}
+      {validationError && (
+        <div
+          role="alert"
+          id="document-validation-alert"
+          style={{
+            padding: '1.25rem',
+            backgroundColor: validationError.type === 'uncertain' ? '#fffbeb' : '#fef2f2',
+            border: `1.5px solid ${validationError.type === 'uncertain' ? '#fcd34d' : '#fca5a5'}`,
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '1rem',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              backgroundColor: validationError.type === 'uncertain' ? '#fef3c7' : '#fee2e2',
+              color: validationError.type === 'uncertain' ? '#d97706' : '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              marginTop: '2px',
+            }}
+          >
+            <AlertTriangle size={20} />
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h4 style={{ fontSize: '0.975rem', fontWeight: 700, color: validationError.type === 'uncertain' ? '#92400e' : '#991b1b', margin: 0 }}>
+                {validationError.title}
+              </h4>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '9999px',
+                  fontWeight: 600,
+                  backgroundColor: validationError.type === 'uncertain' ? '#fef3c7' : '#fee2e2',
+                  color: validationError.type === 'uncertain' ? '#92400e' : '#991b1b',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {validationError.code}
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: validationError.type === 'uncertain' ? '#78350f' : '#7f1d1d', margin: '0 0 0.75rem 0', lineHeight: 1.5 }}>
+              {validationError.message}
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                id="select-another-doc-btn"
+                onClick={() => {
+                  setFile(null);
+                  setValidationError(null);
+                  setErrorMsg('');
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                  fileInputRef.current?.click();
+                }}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  backgroundColor: validationError.type === 'uncertain' ? '#d97706' : '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                Select Another File
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setValidationError(null);
+                  setErrorMsg('');
+                }}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  backgroundColor: 'transparent',
+                  color: validationError.type === 'uncertain' ? '#92400e' : '#991b1b',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!validationError && <ErrorMessage message={errorMsg} onDismiss={() => setErrorMsg('')} />}
 
       <div className="form-group">
         <label className="form-label" htmlFor="doc-type-select">Document Category</label>

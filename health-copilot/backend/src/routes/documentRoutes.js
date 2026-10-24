@@ -34,6 +34,11 @@ router.post('/save-prescription', prescriptionUpload, (req, res, next) =>
   documentController.saveReviewedPrescription(req, res, next)
 );
 
+// AI-powered medical document pre-validation check
+router.post('/validate', upload.single('file'), (req, res, next) =>
+  documentController.validate(req, res, next)
+);
+
 // Upload: saves file associated with req.user.id
 router.post('/', upload.single('file'), (req, res, next) => documentController.upload(req, res, next));
 

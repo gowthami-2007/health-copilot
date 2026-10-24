@@ -57,6 +57,33 @@ class EmailNotVerifiedError extends AppError {
   }
 }
 
+class NonMedicalDocumentError extends AppError {
+  constructor(
+    message = 'This file does not appear to be health-related. Please upload a medical prescription, laboratory report, medical certificate, discharge summary, or another healthcare document.',
+    details = null
+  ) {
+    super(message, 422, 'NON_MEDICAL_DOCUMENT', details);
+  }
+}
+
+class DocumentClassificationUncertainError extends AppError {
+  constructor(
+    message = "We couldn't confidently determine whether this document is health-related. Please upload a clearer image or a readable PDF.",
+    details = null
+  ) {
+    super(message, 422, 'DOCUMENT_CLASSIFICATION_UNCERTAIN', details);
+  }
+}
+
+class DocumentUnreadableError extends AppError {
+  constructor(
+    message = 'This file is empty, corrupted, or unreadable. Please upload a valid PDF or a clear image.',
+    details = null
+  ) {
+    super(message, 400, 'DOCUMENT_UNREADABLE', details);
+  }
+}
+
 module.exports = {
   AppError,
   BadRequestError,
@@ -66,4 +93,8 @@ module.exports = {
   ConflictError,
   ValidationError,
   EmailNotVerifiedError,
+  NonMedicalDocumentError,
+  DocumentClassificationUncertainError,
+  DocumentUnreadableError,
 };
+

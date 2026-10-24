@@ -146,7 +146,26 @@ const PrescriptionExtractorModal = ({ isOpen, onClose, onSaveSuccess }) => {
     } catch (err) {
       console.error('Prescription vision analysis error:', err);
       setPhase('upload');
-      setErrorMsg(err.message || 'Failed to analyze prescription image. Please try again.');
+      const errorCode =
+        err.code ||
+        err.errorCode ||
+        (typeof err.error === 'object' ? err.error?.code : err.error);
+
+      if (errorCode === 'NON_MEDICAL_DOCUMENT') {
+        setErrorMsg(
+          'Invalid Document: This image does not appear to be health-related. Please upload a legitimate medical prescription, lab report, or doctor note.'
+        );
+      } else if (errorCode === 'DOCUMENT_CLASSIFICATION_UNCERTAIN') {
+        setErrorMsg(
+          "Unable to Verify Document: We couldn't confidently determine whether this image is a healthcare document. Please upload a clearer image."
+        );
+      } else if (errorCode === 'DOCUMENT_UNREADABLE') {
+        setErrorMsg(
+          'Unable to Read File: This image is empty, corrupted, or unreadable. Please upload a clear, valid image.'
+        );
+      } else {
+        setErrorMsg(err.message || 'Failed to analyze prescription image. Please try again.');
+      }
     }
   };
 

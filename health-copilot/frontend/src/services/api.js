@@ -51,12 +51,23 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     const errorData = error.response?.data;
-    const message = errorData?.message || error.message || 'An unexpected error occurred';
+    const message =
+      errorData?.message ||
+      (typeof errorData?.error === 'object' ? errorData?.error?.message : null) ||
+      error.message ||
+      'An unexpected error occurred';
+
+    const code =
+      errorData?.errorCode ||
+      (typeof errorData?.error === 'object' ? errorData?.error?.code : errorData?.error) ||
+      'UNKNOWN_ERROR';
 
     return Promise.reject({
       message,
       status: error.response?.status || 500,
-      code: errorData?.error || 'UNKNOWN_ERROR',
+      code,
+      errorCode: code,
+      error: errorData?.error || code,
       details: errorData?.details || null,
       data: errorData?.data || null,
     });

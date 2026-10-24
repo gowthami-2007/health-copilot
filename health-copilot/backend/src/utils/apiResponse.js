@@ -11,10 +11,17 @@ const successResponse = (res, message = 'Success', data = {}, statusCode = 200) 
 };
 
 const errorResponse = (res, message = 'An error occurred', errorCode = 'INTERNAL_ERROR', statusCode = 500, details = null) => {
+  const code = typeof errorCode === 'object' && errorCode !== null ? errorCode.code || 'INTERNAL_ERROR' : errorCode;
+  const msg = typeof errorCode === 'object' && errorCode !== null ? errorCode.message || message : message;
+
   const payload = {
     success: false,
-    message,
-    error: errorCode,
+    message: msg,
+    error: {
+      code,
+      message: msg,
+    },
+    errorCode: code,
   };
 
   if (details && process.env.NODE_ENV !== 'production') {
@@ -23,6 +30,7 @@ const errorResponse = (res, message = 'An error occurred', errorCode = 'INTERNAL
 
   return res.status(statusCode).json(payload);
 };
+
 
 module.exports = {
   successResponse,
